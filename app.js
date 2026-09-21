@@ -100,7 +100,7 @@ function showToast(msg, ms = 2000) {
   setTimeout(() => t.classList.remove('show'), ms);
 }
 
-function setPage(page) {
+function setPage(page, keepCustomWords = false) {
   State.currentPage = page;
   document.querySelectorAll('.nav-item').forEach(el =>
     el.classList.toggle('active', el.dataset.page === page));
@@ -108,7 +108,7 @@ function setPage(page) {
     el.classList.toggle('hidden', el.id !== `page-${page}`));
   document.querySelector('.topbar-title').textContent = {
     dashboard: '🏠 Tổng quan',
-    flashcard: '📚 Flashcard',
+    flashcard: State.isSRSSession ? '🔁 Ôn tập SRS' : '📚 Flashcard',
     quiz:      '✏️ Kiểm tra',
     dictionary:'🔍 Từ điển',
     strokes:   '✍️ Luyện viết chữ & Bộ thủ',
@@ -116,7 +116,10 @@ function setPage(page) {
   }[page];
   // init each section
   if (page === 'dashboard')  renderDashboard();
-  if (page === 'flashcard')  initFlashcard();
+  if (page === 'flashcard' && !keepCustomWords) {
+    State.isSRSSession = false;
+    initFlashcard();
+  }
   if (page === 'quiz')       initQuiz();
   if (page === 'dictionary') renderDictionary();
   if (page === 'strokes')    initStrokes();
@@ -203,7 +206,7 @@ function renderFlashcard() {
   const known = State.progress[key] === 'know';
 
   document.getElementById('fc-counter').textContent = `${idx + 1} / ${words.length}`;
-  document.getElementById('fc-level-label').textContent = levelName(State.currentLevel === 'all' ? word.level : State.currentLevel);
+  document.getElementById('fc-level-label').textContent = State.isSRSSession ? `🔁 Ôn SRS (HSK ${word.level})` : levelName(State.currentLevel === 'all' ? word.level : State.currentLevel);
 
   // Front face
   document.getElementById('fc-hanzi').textContent    = word.hanzi;
@@ -259,8 +262,10 @@ function markWord(result) {
   if (result === 'know') {
     bumpStreak();
     updateSRS(word, true);
+    showToast('✅ Đã thuộc từ này!');
   } else {
     updateSRS(word, false);
+    showToast('🔁 Đã thêm vào mục "Cần ôn hôm nay"!');
   }
   Storage.save();
   if (State.fcIndex < State.fcWords.length - 1) {
@@ -285,13 +290,16 @@ function updateSRS(word, correct) {
   }
 
   if (correct) {
-    entry.interval = Math.round(entry.interval * entry.ease);
-    entry.ease     = Math.max(1.3, entry.ease + 0.1);
+    entry.interval = Math.max(1, Math.round(entry.interval * entry.ease));
+    entry.ease     = Math.min(3.0, entry.ease + 0.1);
+    // Thuộc rồi -> Xếp lịch ôn vào các ngày tiếp theo (sau 1 ngày, 3 ngày, 7 ngày...)
+    entry.nextReview = now + entry.interval * 24 * 60 * 60 * 1000;
   } else {
     entry.interval = 1;
     entry.ease     = Math.max(1.3, entry.ease - 0.2);
+    // Chưa thuộc -> Đưa vào danh sách CẦN ÔN NGAY HÔM NAY!
+    entry.nextReview = now - 1000;
   }
-  entry.nextReview = now + entry.interval * 24 * 60 * 60 * 1000;
   Storage.save();
 }
 
@@ -629,10 +637,18 @@ function startSRSSession() {
     .filter(s => new Date(s.nextReview).getTime() <= now)
     .map(s => s.key);
   const dueWords = ALL_WORDS.filter(w => dueKeys.includes(progressKey(w)));
+  if (!dueWords.length) {
+    showToast('🌟 Bạn không có từ nào cần ôn hôm nay!');
+    return;
+  }
+  State.isSRSSession = true;
   State.fcWords   = shuffle(dueWords);
   State.fcIndex   = 0;
   State.fcFlipped = false;
-  setPage('flashcard');
+  setPage('flashcard', true);
+  renderFlashcard();
+  updateFCProgress();
+  showToast(`🔁 Bắt đầu ôn tập ${dueWords.length} từ cần nhớ hôm nay!`);
 }
 
 /* ═══════════════════════════════════════════
