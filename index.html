@@ -68,22 +68,22 @@
       <!-- ══ PAGE: DASHBOARD ══ -->
       <section id="page-dashboard" class="page-section">
         <div class="dashboard-grid">
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="setPage('dictionary')" title="Xem toàn bộ từ điển">
             <div class="stat-icon">📖</div>
             <div class="stat-value" id="dash-total">0</div>
             <div class="stat-label">Tổng số từ</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="setPage('flashcard')" title="Học từ đã thuộc">
             <div class="stat-icon">✅</div>
             <div class="stat-value" id="dash-learned">0</div>
             <div class="stat-label">Đã thuộc</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer;border-color:var(--brand);background:linear-gradient(145deg,#fff,#fff1f2)" onclick="setPage('srs')" title="Bấm để ôn tập ngay">
             <div class="stat-icon">🔁</div>
-            <div class="stat-value" id="dash-due">0</div>
-            <div class="stat-label">Cần ôn hôm nay</div>
+            <div class="stat-value" id="dash-due" style="color:var(--brand)">0</div>
+            <div class="stat-label" style="font-weight:700;color:var(--brand)">Cần ôn hôm nay</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" title="Chuỗi ngày học liên tục">
             <div class="stat-icon">🔥</div>
             <div class="stat-value" id="dash-streak">0</div>
             <div class="stat-label">Ngày liên tiếp</div>
