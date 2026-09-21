@@ -397,34 +397,28 @@ ul { list-style: none; }
 .fc-btn:hover { background: var(--surface2); color: var(--brand); border-color: var(--border-hover); }
 .fc-btn.active { background: var(--brand-light); color: var(--brand); border-color: #FECDD3; }
 
-/* Flip card */
+/* Flip card — Tối ưu 100% cho iPhone & mọi thiết bị */
 .card-scene {
   width: 100%;
   max-width: 600px;
   margin: 0 auto 32px;
-  perspective: 1400px;
-  -webkit-perspective: 1400px;
 }
 .card-wrap {
   width: 100%;
   min-height: 360px;
   position: relative;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  transition: transform .6s cubic-bezier(.4, 0, .2, 1);
-  -webkit-transition: -webkit-transform .6s cubic-bezier(.4, 0, .2, 1);
   cursor: pointer;
+  transition: transform .18s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.card-wrap.flipped {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
+.card-wrap:active {
+  transform: scale(0.98);
 }
 
 .card-face {
-  position: absolute; inset: 0;
+  width: 100%;
+  min-height: 360px;
   border-radius: var(--radius);
-  backface-visibility: hidden !important;
-  -webkit-backface-visibility: hidden !important;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -433,41 +427,38 @@ ul { list-style: none; }
   text-align: center;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  transition: opacity .3s ease;
+  animation: cardFlipIn .25s ease-out;
+}
+
+@keyframes cardFlipIn {
+  0% { opacity: 0.3; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* Front face */
 .card-front {
   background: #FFFFFF;
-  z-index: 2;
-  transform: rotateY(0deg) translateZ(1px);
-  -webkit-transform: rotateY(0deg) translateZ(1px);
-  opacity: 1;
-}
-.card-wrap.flipped .card-front {
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
-  transition: opacity .2s ease, visibility 0s .2s;
 }
 
 /* Back face */
 .card-back {
   background: linear-gradient(145deg, #FFFFFF 0%, #FFFBEB 100%);
-  transform: rotateY(180deg) translateZ(1px);
-  -webkit-transform: rotateY(180deg) translateZ(1px);
   border: 1px solid #FEF3C7;
-  z-index: 1;
-  opacity: 0;
-  visibility: hidden;
+}
+
+/* Chống lỗi hiển thị chồng đè 100% trên Safari/iOS */
+.card-wrap:not(.flipped) .card-front {
+  display: flex !important;
+}
+.card-wrap:not(.flipped) .card-back {
+  display: none !important;
+}
+
+.card-wrap.flipped .card-front {
+  display: none !important;
 }
 .card-wrap.flipped .card-back {
-  opacity: 1;
-  visibility: visible;
-  z-index: 2;
-  transition: opacity .25s ease .15s, visibility 0s;
+  display: flex !important;
 }
 
 /* Badges on card */
