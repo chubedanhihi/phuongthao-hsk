@@ -615,19 +615,28 @@ function renderSRS() {
   el.innerHTML = `
     <div class="section-title">📋 ${dueWords.length} từ cần ôn hôm nay</div>
     <div class="quick-actions">
-      <button class="action-btn primary" onclick="startSRSSession()">▶ Bắt đầu ôn tập</button>
+      <button class="action-btn primary" onclick="startSRSSession()">▶ Bắt đầu ôn tập (${dueWords.length} từ)</button>
     </div>
     <div class="srs-queue-list">
-      ${dueWords.map(w => `
+      ${dueWords.map(w => {
+        const bg = levelColor(w.level);
+        return `
         <div class="srs-item">
           <div class="srs-hanzi">${w.hanzi}</div>
           <div class="srs-meta">
-            <div style="font-size:14px;font-weight:600;">${w.pinyin}</div>
-            <div style="font-size:13px;color:var(--text-muted)">${w.meaning}</div>
-            <div class="srs-due">⏰ Cần ôn ngay</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span class="lv-badge" style="background:${bg};font-size:11px;padding:3px 10px">${levelName(w.level)}</span>
+              <span style="font-size:15px;font-weight:700;color:var(--brand)">${w.pinyin || ''}</span>
+            </div>
+            <div style="font-size:14px;color:var(--text);font-weight:600;margin-bottom:4px">${w.meaning || ''}</div>
+            <div class="srs-due">⏰ Cần ôn ngay hôm nay</div>
           </div>
-          <button class="tts-btn" onclick="speak('${w.hanzi}')">🔊</button>
-        </div>`).join('')}
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="tts-btn" style="padding:8px 14px;font-size:13px;font-weight:700;color:var(--brand);background:#FFF1F2;border-color:#FECDD3" onclick="jumpToStrokePractice('${w.hanzi.replace(/'/g,"\\'")}')" title="Tập viết chữ này">✍️ Tập viết</button>
+            <button class="tts-btn" style="padding:8px 12px;font-size:14px" onclick="speak('${w.hanzi.replace(/'/g,"\\'")}')" title="Nghe phát âm">🔊</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -1014,6 +1023,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-tts').addEventListener('click', () => {
     const word = State.fcWords[State.fcIndex];
     if (word) speak(word.hanzi);
+  });
+  document.getElementById('btn-fc-write')?.addEventListener('click', () => {
+    const word = State.fcWords[State.fcIndex];
+    if (word) jumpToStrokePractice(word.hanzi);
   });
 
   // Flashcard action buttons
