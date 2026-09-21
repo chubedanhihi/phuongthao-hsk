@@ -621,19 +621,19 @@ function renderSRS() {
       ${dueWords.map(w => {
         const bg = levelColor(w.level);
         return `
-        <div class="srs-item">
+        <div class="srs-item" onclick="dictSpeak('${w.hanzi.replace(/'/g,"\\'")}')" style="cursor:pointer">
           <div class="srs-hanzi">${w.hanzi}</div>
           <div class="srs-meta">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-              <span class="lv-badge" style="background:${bg};font-size:11px;padding:3px 10px">${levelName(w.level)}</span>
-              <span style="font-size:15px;font-weight:700;color:var(--brand)">${w.pinyin || ''}</span>
-            </div>
+            <div style="font-size:15px;font-weight:700;color:var(--brand);margin-bottom:4px">${w.pinyin || ''}</div>
             <div style="font-size:14px;color:var(--text);font-weight:600;margin-bottom:4px">${w.meaning || ''}</div>
             <div class="srs-due">⏰ Cần ôn ngay hôm nay</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button class="tts-btn" style="padding:8px 14px;font-size:13px;font-weight:700;color:var(--brand);background:#FFF1F2;border-color:#FECDD3" onclick="jumpToStrokePractice('${w.hanzi.replace(/'/g,"\\'")}')" title="Tập viết chữ này">✍️ Tập viết</button>
-            <button class="tts-btn" style="padding:8px 12px;font-size:14px" onclick="speak('${w.hanzi.replace(/'/g,"\\'")}')" title="Nghe phát âm">🔊</button>
+          <div class="dict-badge-wrap">
+            <span class="lv-badge" style="background:${bg}">${levelName(w.level)}</span>
+            <div style="display:flex;gap:6px">
+              <button class="tts-btn" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--brand);background:#FFF1F2;border-color:#FECDD3" onclick="event.stopPropagation();jumpToStrokePractice('${w.hanzi.replace(/'/g,"\\'")}')" title="Tập viết chữ này">✍️ Viết</button>
+              <button class="tts-btn" style="padding:6px 10px;font-size:12px" onclick="event.stopPropagation();speak('${w.hanzi.replace(/'/g,"\\'")}')" title="Nghe phát âm">🔊</button>
+            </div>
           </div>
         </div>`;
       }).join('')}
