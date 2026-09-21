@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HSK Learn — Học tiếng Trung</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🀄</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ───── SIDEBAR ───── -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🀄</div>
+      <div>
+        <div class="logo-text">HSK Learn</div>
+        <div class="logo-sub">Học tiếng Trung</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <button class="nav-item" data-page="dashboard">
+        <span class="nav-icon">🏠</span> Tổng quan
+      </button>
+      <button class="nav-item" data-page="flashcard">
+        <span class="nav-icon">📚</span> Flashcard
+      </button>
+      <button class="nav-item" data-page="quiz">
+        <span class="nav-icon">✏️</span> Kiểm tra
+      </button>
+      <button class="nav-item" data-page="dictionary">
+        <span class="nav-icon">🔍</span> Từ điển
+      </button>
+      <button class="nav-item" data-page="strokes">
+        <span class="nav-icon">✍️</span> Luyện viết chữ
+      </button>
+      <button class="nav-item" data-page="srs">
+        <span class="nav-icon">🔁</span> Ôn tập SRS
+      </button>
+    </div>
+    <div class="sidebar-footer">phuongthaoHSK3.0@</div>
+  </nav>
+
+  <!-- ───── MAIN ───── -->
+  <div id="main">
+
+    <!-- Top bar -->
+    <header id="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="hamburger" aria-label="Menu">☰</button>
+        <span class="topbar-title">🏠 Tổng quan</span>
+      </div>
+      <div class="topbar-right">
+        <button class="level-select" id="level-btn">
+          📊 Cấp độ: <span id="level-label">Tất cả</span> ▾
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main id="content">
+
+      <!-- ══ PAGE: DASHBOARD ══ -->
+      <section id="page-dashboard" class="page-section">
+        <div class="dashboard-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📖</div>
+            <div class="stat-value" id="dash-total">0</div>
+            <div class="stat-label">Tổng số từ</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="dash-learned">0</div>
+            <div class="stat-label">Đã thuộc</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔁</div>
+            <div class="stat-value" id="dash-due">0</div>
+            <div class="stat-label">Cần ôn hôm nay</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-value" id="dash-streak">0</div>
+            <div class="stat-label">Ngày liên tiếp</div>
+          </div>
+        </div>
+
+        <div class="section-title">Tiến độ theo cấp</div>
+        <div class="hsk-levels-grid" id="dash-levels"></div>
+
+        <div class="section-title">Bắt đầu nhanh</div>
+        <div class="quick-actions">
+          <button class="action-btn primary"   id="dash-btn-fc">📚 Học Flashcard</button>
+          <button class="action-btn secondary" id="dash-btn-quiz">✏️ Làm bài quiz</button>
+          <button class="action-btn success"   id="dash-btn-srs">🔁 Ôn tập SRS</button>
+          <button class="action-btn warn"      id="dash-btn-reset">🔄 Đặt lại tiến độ</button>
+        </div>
+      </section>
+
+      <!-- ══ PAGE: FLASHCARD ══ -->
+      <section id="page-flashcard" class="page-section hidden">
+        <div class="flashcard-header">
+          <span id="fc-counter" class="text-muted" style="font-size:14px"></span>
+          <div class="flashcard-controls">
+            <button class="fc-btn" id="btn-prev">← Trước</button>
+            <button class="fc-btn" id="btn-next">Sau →</button>
+            <button class="fc-btn" id="btn-shuffle">🔀 Ngẫu nhiên</button>
+            <button class="fc-btn active" id="btn-pinyin">拼 Pinyin</button>
+            <button class="fc-btn" id="btn-tts">🔊 Nghe</button>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="fc-progress-fill" style="width:0%"></div>
+        </div>
+
+        <!-- The flip card -->
+        <div class="card-scene" id="fc-scene">
+          <div class="card-wrap" id="fc-card-wrap">
+            <!-- Front -->
+            <div class="card-face card-front">
+              <span class="card-level-badge" id="fc-level-label">HSK 1</span>
+              <span class="card-type-badge"  id="fc-type-badge">n</span>
+              <div class="card-hanzi"   id="fc-hanzi">你好</div>
+              <div class="card-pinyin-front" id="fc-pinyin-f">nǐ hǎo</div>
+              <div class="card-hint">Nhấn vào thẻ để lật xem nghĩa 👆</div>
+            </div>
+            <!-- Back -->
+            <div class="card-face card-back">
+              <div class="card-pinyin-back" id="fc-pinyin-b">nǐ hǎo</div>
+              <div class="card-meaning"     id="fc-meaning">xin chào</div>
+              <div class="card-example">
+                <div class="ex-cn" id="fc-ex-cn"></div>
+                <div class="ex-py" id="fc-ex-py"></div>
+                <div class="ex-vn" id="fc-ex-vn"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons (visible after flip) -->
+        <div class="card-actions">
+          <button class="card-action-btn btn-again" id="btn-again">
+            <span class="btn-icon">✗</span>Chưa biết
+          </button>
+          <button class="card-action-btn btn-skip" id="btn-skip">
+            <span class="btn-icon">→</span>Bỏ qua
+          </button>
+          <button class="card-action-btn btn-know" id="btn-know">
+            <span class="btn-icon">✓</span>Đã biết
+          </button>
+        </div>
+      </section>
+
+      <!-- ══ PAGE: QUIZ ══ -->
+      <section id="page-quiz" class="page-section hidden">
+
+        <!-- 1. QUIZ LOBBY / SETUP -->
+        <div id="quiz-lobby" class="card">
+          <div style="text-align:center;margin-bottom:28px">
+            <h2 style="font-size:24px;font-weight:900;margin-bottom:6px">✏️ Trung Tâm Kiểm Tra HSK</h2>
+            <p style="color:var(--text-muted);font-size:14px">Tùy chỉnh bài thi theo cấp độ và dạng câu hỏi bạn muốn luyện tập</p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:28px">
+            <!-- Chọn cấp độ -->
+            <div>
+              <label style="font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">1. Cấp độ kiểm tra</label>
+              <div class="quiz-setup-grid" id="quiz-level-options">
+                <button class="quiz-pill-btn active" data-val="all">Tất cả</button>
+                <button class="quiz-pill-btn" data-val="1">HSK 1</button>
+                <button class="quiz-pill-btn" data-val="2">HSK 2</button>
+                <button class="quiz-pill-btn" data-val="3">HSK 3</button>
+                <button class="quiz-pill-btn" data-val="4">HSK 4</button>
+                <button class="quiz-pill-btn" data-val="5">HSK 5</button>
+                <button class="quiz-pill-btn" data-val="6">HSK 6</button>
+                <button class="quiz-pill-btn" data-val="7">HSK 7</button>
+                <button class="quiz-pill-btn" data-val="8">HSK 8</button>
+                <button class="quiz-pill-btn" data-val="9">HSK 9</button>
+              </div>
+            </div>
+
+            <!-- Chọn chế độ thi -->
+            <div>
+              <label style="font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">2. Dạng câu hỏi</label>
+              <div style="display:flex;flex-direction:column;gap:8px" id="quiz-mode-options">
+                <button class="quiz-mode-btn active" data-mode="hanzi_to_meaning">
+                  <span style="font-size:20px;min-width:44px;text-align:center">🀄 ➔ 🇻🇳</span>
+                  <div style="flex:1">
+                    <div style="font-weight:700;font-size:14px">Chữ Hán ➔ Nghĩa Tiếng Việt</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Nhìn chữ Hán, chọn nghĩa tiếng Việt đúng</div>
+                  </div>
+                </button>
+                <button class="quiz-mode-btn" data-mode="meaning_to_hanzi">
+                  <span style="font-size:20px;min-width:44px;text-align:center">🇻🇳 ➔ 🀄</span>
+                  <div style="flex:1">
+                    <div style="font-weight:700;font-size:14px">Nghĩa Tiếng Việt ➔ Chữ Hán</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Nhìn nghĩa tiếng Việt, chọn chữ Hán đúng</div>
+                  </div>
+                </button>
+                <button class="quiz-mode-btn" data-mode="hanzi_to_pinyin">
+                  <span style="font-size:20px;min-width:44px;text-align:center">🀄 ➔ 拼</span>
+                  <div style="flex:1">
+                    <div style="font-weight:700;font-size:14px">Chữ Hán ➔ Phiên âm Pinyin</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Luyện nhận diện thanh điệu và pinyin</div>
+                  </div>
+                </button>
+                <button class="quiz-mode-btn" data-mode="listening">
+                  <span style="font-size:20px;min-width:44px;text-align:center">🔊 ➔ 🀄</span>
+                  <div style="flex:1">
+                    <div style="font-weight:700;font-size:14px">Luyện nghe phát âm ➔ Chọn từ</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Nghe giọng phát âm và chọn chữ Hán đúng</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Chọn số lượng câu -->
+            <div>
+              <label style="font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">3. Số lượng câu</label>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px" id="quiz-count-options">
+                <button class="quiz-pill-btn active" data-count="10">10 câu</button>
+                <button class="quiz-pill-btn" data-count="20">20 câu</button>
+                <button class="quiz-pill-btn" data-count="30">30 câu</button>
+                <button class="quiz-pill-btn" data-count="50">50 câu</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center">
+            <button class="action-btn primary" id="btn-start-quiz" style="padding:15px 40px;font-size:16px;border-radius:12px">
+              🚀 Bắt Đầu Làm Bài
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. QUIZ GAMEPLAY -->
+        <div id="quiz-body" class="hidden">
+          <div class="quiz-meta" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="quiz-score-badge" id="quiz-score-badge">⭐ 0</span>
+              <span class="quiz-counter" id="quiz-counter">Câu 1 / 10</span>
+            </div>
+            <button class="fc-btn" id="btn-quit-quiz" style="font-size:12px">✕ Thoát bài thi</button>
+          </div>
+
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="quiz-progress-fill" style="width:0%"></div>
+          </div>
+
+          <div class="quiz-question-card">
+            <div class="quiz-type-label" id="quiz-type-label">Chọn nghĩa đúng của từ sau</div>
+            <div class="quiz-hanzi" id="quiz-hanzi">你好</div>
+            <div class="quiz-pinyin" id="quiz-pinyin">nǐ hǎo</div>
+            <div style="margin-top:14px" id="quiz-audio-wrap">
+              <button class="tts-btn" id="quiz-tts-btn" style="padding:8px 16px;font-size:16px">🔊 Nghe lại</button>
+            </div>
+          </div>
+
+          <div class="quiz-options" id="quiz-options"></div>
+
+          <div class="quiz-feedback" id="quiz-feedback"></div>
+
+          <button class="quiz-next-btn" id="quiz-next-btn">Câu tiếp theo (Space / Enter) →</button>
+        </div>
+
+        <!-- 3. QUIZ RESULT -->
+        <div id="quiz-result" class="card quiz-result hidden">
+          <div class="result-emoji" id="result-emoji">🎉</div>
+          <div class="result-title" id="result-title">Xuất sắc!</div>
+          <div class="result-subtitle" id="result-subtitle"></div>
+          <div class="result-stats">
+            <div class="result-stat">
+              <div class="rs-val" id="result-score" style="color:var(--green)">0</div>
+              <div class="rs-lbl">Đúng</div>
+            </div>
+            <div class="result-stat">
+              <div class="rs-val" id="result-total" style="color:var(--text-muted)">0</div>
+              <div class="rs-lbl">Tổng câu</div>
+            </div>
+            <div class="result-stat">
+              <div class="rs-val" id="result-pct" style="color:var(--brand)">0%</div>
+              <div class="rs-lbl">Điểm số</div>
+            </div>
+          </div>
+
+          <!-- Chi tiết câu trả lời -->
+          <div style="text-align:left;margin-bottom:28px">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text-muted);text-transform:uppercase">📋 Chi tiết bài làm</h3>
+            <div id="quiz-review-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:6px"></div>
+          </div>
+
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <button class="action-btn primary" id="quiz-restart">🔄 Làm bài mới</button>
+            <button class="action-btn secondary" id="quiz-retry-wrong" style="display:none">⚠️ Ôn lại câu sai</button>
+            <button class="action-btn" style="background:var(--surface2);border:1px solid var(--border)" onclick="setPage('flashcard')">📚 Sang Flashcard</button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ══ PAGE: DICTIONARY ══ -->
+      <section id="page-dictionary" class="page-section hidden">
+        <div class="dict-search-wrap">
+          <span class="dict-search-icon">🔍</span>
+          <input
+            class="dict-search"
+            id="dict-input"
+            type="text"
+            placeholder="Tìm theo chữ Hán, pinyin hoặc nghĩa tiếng Việt…"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="dict-filters">
+          <button class="filter-chip active" data-level="all">Tất cả</button>
+          <button class="filter-chip" data-level="1">HSK 1</button>
+          <button class="filter-chip" data-level="2">HSK 2</button>
+          <button class="filter-chip" data-level="3">HSK 3</button>
+          <button class="filter-chip" data-level="4">HSK 4</button>
+          <button class="filter-chip" data-level="5">HSK 5</button>
+          <button class="filter-chip" data-level="6">HSK 6</button>
+          <button class="filter-chip" data-level="7">HSK 7</button>
+          <button class="filter-chip" data-level="8">HSK 8</button>
+          <button class="filter-chip" data-level="9">HSK 9</button>
+          <span id="dict-count" style="margin-left:auto;font-size:12px;color:var(--text-muted);align-self:center"></span>
+        </div>
+
+        <div class="dict-results" id="dict-results"></div>
+      </section>
+
+      <!-- ══ PAGE: STROKES (LUYỆN VIẾT & BỘ THỦ) ══ -->
+      <section id="page-strokes" class="page-section hidden">
+        <!-- Sub-tabs Navigation -->
+        <div class="dict-filters" style="margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:16px">
+          <button class="filter-chip active" id="tab-btn-practice" onclick="switchStrokeTab('practice')">✍️ Tập viết chữ Hán</button>
+          <button class="filter-chip" id="tab-btn-radicals" onclick="switchStrokeTab('radicals')">📖 214 Bộ thủ chữ Hán</button>
+          <button class="filter-chip" id="tab-btn-rules" onclick="switchStrokeTab('rules')">📜 8 Quy tắc bút thuận</button>
+        </div>
+
+        <!-- 1. TAB: TẬP VIẾT CHỮ HÁN -->
+        <div id="stroke-tab-practice">
+          <!-- Character selector / search -->
+          <div class="card" style="margin-bottom:24px">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div style="flex:1;min-width:240px">
+                <label style="font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">NHẬP CHỮ HÁN BẤT KỲ ĐỂ TẬP VIẾT:</label>
+                <div style="display:flex;gap:10px">
+                  <input type="text" id="stroke-char-input" value="你" maxlength="2" style="font-size:24px;font-weight:800;text-align:center;width:80px;height:52px;border:2px solid var(--brand);border-radius:12px;outline:none;background:#fff;color:var(--text)" />
+                  <button class="action-btn primary" id="btn-load-stroke-char" style="height:52px;border-radius:12px">🔍 Nạp chữ viết</button>
+                </div>
+              </div>
+              <div style="flex:2;min-width:300px">
+                <label style="font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px">GỢI Ý TỪ PHỔ BIẾN:</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap" id="stroke-quick-chars">
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('你')">你</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('好')">好</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('爱')">爱</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('学')">学</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('中')">中</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('国')">国</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('家')">家</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('水')">水</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('福')">福</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('龙')">龙</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('德')">德</button>
+                  <button class="quiz-pill-btn" onclick="loadStrokeChar('道')">道</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Character Detail & Writing Arena -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px">
+            
+            <!-- Cột 1: Nét viết chuẩn & Hoạt họa Animation -->
+            <div class="card" style="text-align:center">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <span class="badge" style="background:var(--brand-light);color:var(--brand)">Nét chuẩn hoạt họa</span>
+                <button class="tts-btn" id="btn-stroke-tts" style="padding:4px 12px">🔊 Nghe phát âm</button>
+              </div>
+
+              <!-- Thông tin chữ -->
+              <div style="margin-bottom:16px;display:flex;justify-content:center;gap:20px;align-items:baseline">
+                <span id="stroke-info-hanzi" style="font-size:36px;font-weight:900;font-family:'Noto Sans SC'">你</span>
+                <span id="stroke-info-pinyin" style="font-size:22px;font-weight:700;color:var(--brand)">nǐ</span>
+                <span id="stroke-info-meaning" style="font-size:15px;color:var(--text-secondary);font-weight:600">bạn, anh, chị</span>
+              </div>
+
+              <!-- Khung Hanzi Writer -->
+              <div id="hanzi-writer-box" class="tianzige-box" style="margin:0 auto 20px;width:260px;height:260px"></div>
+
+              <!-- Nút điều khiển hoạt họa -->
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="action-btn primary" id="btn-animate-stroke" style="padding:10px 16px;font-size:13px">▶ Chạy nét viết</button>
+                <button class="action-btn secondary" id="btn-loop-stroke" style="padding:10px 16px;font-size:13px">🔂 Lặp lại</button>
+                <button class="action-btn success" id="btn-quiz-stroke" style="padding:10px 16px;font-size:13px">🎯 Đố nét viết</button>
+              </div>
+            </div>
+
+            <!-- Cột 2: Bảng tập viết tay tự do (Canvas) -->
+            <div class="card" style="text-align:center">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <span class="badge" style="background:var(--green-light);color:#047857">Bảng tập viết tay tự do</span>
+                <span style="font-size:12px;color:var(--text-muted)">Vẽ bằng chuột / cảm ứng</span>
+              </div>
+
+              <!-- Khung Canvas Kẻ ô Mễ -->
+              <div class="canvas-wrap" style="position:relative;margin:0 auto 20px;width:260px;height:260px">
+                <div id="canvas-watermark" style="position:absolute;inset:0;display:grid;place-items:center;font-size:170px;font-family:'Noto Sans SC';color:rgba(148,163,184,0.35);pointer-events:none;user-select:none;z-index:1">你</div>
+                <canvas id="stroke-canvas" width="260" height="260" style="position:relative;z-index:2;background:transparent;cursor:crosshair;touch-action:none;display:block;width:260px;height:260px"></canvas>
+              </div>
+
+              <!-- Công cụ vẽ -->
+              <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap">
+                <button class="action-btn" id="btn-clear-canvas" style="background:var(--surface2);border:1px solid var(--border);padding:10px 16px;font-size:13px">🧹 Xóa nét vẽ</button>
+                <button class="fc-btn active" id="btn-color-black" onclick="setCanvasColor('#0F172A')" style="padding:8px 12px">⚫ Đen</button>
+                <button class="fc-btn" id="btn-color-red" onclick="setCanvasColor('#E11D48')" style="padding:8px 12px">🔴 Đỏ</button>
+                <button class="fc-btn" id="btn-color-blue" onclick="setCanvasColor('#0284C7')" style="padding:8px 12px">🔵 Xanh</button>
+                <button class="fc-btn" id="btn-toggle-watermark" style="padding:8px 12px">👁️ Nét mờ</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2. TAB: 214 BỘ THỦ -->
+        <div id="stroke-tab-radicals" class="hidden">
+          <div class="card" style="margin-bottom:20px">
+            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+              <div style="flex:1;min-width:240px">
+                <input type="text" class="dict-search" id="radical-search-input" placeholder="Tìm theo bộ thủ, pinyin, tên Hán Việt hoặc nghĩa..." />
+              </div>
+              <span id="radical-count" style="font-size:13px;color:var(--text-muted);font-weight:700">214 bộ thủ</span>
+            </div>
+          </div>
+
+          <!-- Lưới danh sách bộ thủ -->
+          <div class="radicals-grid" id="radicals-grid"></div>
+        </div>
+
+        <!-- 3. TAB: 8 QUY TẮC BÚT THUẬN -->
+        <div id="stroke-tab-rules" class="hidden">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px" id="stroke-rules-list"></div>
+        </div>
+      </section>
+
+      <!-- ══ PAGE: SRS ══ -->
+      <section id="page-srs" class="page-section hidden">
+        <div id="srs-content"></div>
+      </section>
+
+    </main><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Level Select Modal -->
+<div class="modal-overlay" id="level-modal">
+  <div class="modal-box">
+    <div class="modal-title">📊 Chọn cấp độ HSK</div>
+    <div class="modal-level-grid">
+      <button class="modal-lv-btn all-btn" data-level="all">Tất cả cấp độ</button>
+      <button class="modal-lv-btn" data-level="1">HSK 1</button>
+      <button class="modal-lv-btn" data-level="2">HSK 2</button>
+      <button class="modal-lv-btn" data-level="3">HSK 3</button>
+      <button class="modal-lv-btn" data-level="4">HSK 4</button>
+      <button class="modal-lv-btn" data-level="5">HSK 5</button>
+      <button class="modal-lv-btn" data-level="6">HSK 6</button>
+      <button class="modal-lv-btn" data-level="7">HSK 7</button>
+      <button class="modal-lv-btn" data-level="8">HSK 8</button>
+      <button class="modal-lv-btn" data-level="9">HSK 9</button>
+    </div>
+    <button class="modal-close" id="modal-close">Xác nhận</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Hanzi Writer Library (Local + CDN fallback) -->
+<script src="lib/hanzi-writer.min.js"></script>
+<script>
+  if (!window.HanziWriter) {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"><\/script>');
+  }
+</script>
+
+<!-- Scripts — data TRƯỚC, app SAU -->
+<script src="data/hsk_data.js"></script>
+<script src="data/radicals_data.js"></script>
+<script src="data/strokes_cache.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
