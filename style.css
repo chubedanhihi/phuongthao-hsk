@@ -1470,6 +1470,7 @@ ul { list-style: none; }
 /* Admin Table */
 .admin-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;

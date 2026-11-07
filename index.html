@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5.2" />
+  <link rel="stylesheet" href="style.css?v=5.3" />
 </head>
 <body>
 
@@ -605,6 +605,9 @@
               </div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="action-btn" onclick="openCreateStudentModal()" style="background:#F0FDF4;color:#047857;border:1px solid #A7F3D0;padding:10px 16px;font-size:13px;font-weight:700">
+                ➕ Thêm học viên
+              </button>
               <button class="action-btn" onclick="openClassExportModal()" style="background:#FFFFFF;border:1px solid var(--border);padding:10px 16px;font-size:13px">
                 📤 Xuất Gói Lớp Học (Zalo)
               </button>
@@ -654,7 +657,10 @@
           <div class="card" style="margin-bottom:20px">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
               <input type="text" class="dict-search" id="admin-search-student" placeholder="Tìm theo tên học viên hoặc username..." style="max-width:320px;padding:12px 14px 12px 42px" oninput="renderAdminStudents()" />
-              <div style="font-size:13px;color:var(--text-muted);font-weight:700" id="admin-student-count">0 học viên</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span style="font-size:13px;color:var(--text-muted);font-weight:700" id="admin-student-count">0 học viên</span>
+                <button class="action-btn primary" onclick="openCreateStudentModal()" style="padding:8px 16px;font-size:13px">➕ Thêm học viên mới</button>
+              </div>
             </div>
             <div style="overflow-x:auto">
               <table class="admin-table" id="admin-students-table">
@@ -869,6 +875,49 @@
   </div>
 </div>
 
+<!-- Admin Modal: Thêm học viên mới -->
+<div class="modal-overlay" id="create-student-modal">
+  <div class="modal-box" style="width:480px;max-width:92vw">
+    <div class="auth-header">
+      <div class="auth-logo">👤</div>
+      <h3 class="auth-title">Thêm Học Viên Mới</h3>
+      <p class="auth-subtitle">Cấp tài khoản trực tiếp cho học viên tham gia lớp học</p>
+    </div>
+    <form id="form-create-student" onsubmit="handleCreateStudentSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Họ và tên học viên</label>
+        <input type="text" class="form-input" id="adm-new-name" placeholder="Ví dụ: Nguyễn Thu Hà" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập (viết liền không dấu)</label>
+        <input type="text" class="form-input" id="adm-new-username" placeholder="Ví dụ: ha_nguyen" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu khởi tạo</label>
+        <input type="password" class="form-input" id="adm-new-password" placeholder="Tối thiểu 4 ký tự" value="123456" required minlength="4" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hình đại diện (Avatar)</label>
+        <div class="avatar-picker-grid" id="adm-avatar-picker-grid">
+          <button type="button" class="avatar-opt active" data-avatar="🐼">🐼</button>
+          <button type="button" class="avatar-opt" data-avatar="🐯">🐯</button>
+          <button type="button" class="avatar-opt" data-avatar="🐉">🐉</button>
+          <button type="button" class="avatar-opt" data-avatar="🦊">🦊</button>
+          <button type="button" class="avatar-opt" data-avatar="🌸">🌸</button>
+          <button type="button" class="avatar-opt" data-avatar="🥋">🥋</button>
+          <button type="button" class="avatar-opt" data-avatar="🏮">🏮</button>
+          <button type="button" class="avatar-opt" data-avatar="⭐">⭐</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button type="button" class="action-btn" onclick="closeCreateStudentModal()" style="flex:1;background:var(--surface2)">Hủy</button>
+        <button type="submit" class="action-btn primary" style="flex:2">➕ Tạo Tài Khoản</button>
+      </div>
+    </form>
+    <button type="button" class="modal-close" onclick="closeCreateStudentModal()">✕</button>
+  </div>
+</div>
+
 <!-- Admin Modal: Giao bài tập mới -->
 <div class="modal-overlay" id="create-assignment-modal">
   <div class="modal-box" style="width:480px;max-width:92vw">
@@ -1069,9 +1118,9 @@
 </script>
 
 <!-- Scripts — data TRƯỚC, app SAU -->
-<script src="data/hsk_data.js?v=5.2"></script>
-<script src="data/radicals_data.js?v=5.2"></script>
-<script src="data/strokes_cache.js?v=5.2"></script>
-<script src="app.js?v=5.2"></script>
+<script src="data/hsk_data.js?v=5.3"></script>
+<script src="data/radicals_data.js?v=5.3"></script>
+<script src="data/strokes_cache.js?v=5.3"></script>
+<script src="app.js?v=5.3"></script>
 </body>
 </html>

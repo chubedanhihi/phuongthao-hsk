@@ -445,6 +445,71 @@ const ClassManager = {
       ];
       this.saveAnnouncements(initialAnnouncements);
     }
+    // Seed demo students if no students exist
+    try {
+      const users = Auth.getUsers();
+      const students = users.filter(u => u.role !== 'admin');
+      if (students.length === 0) {
+        const demoStudents = [
+          {
+            id: 'u_demo_1',
+            name: 'Nguyễn Thu Hà',
+            username: 'ha_nguyen',
+            password: '123',
+            role: 'student',
+            avatar: '🌸',
+            createdAt: '15/01/2025',
+            lastLogin: new Date().toISOString()
+          },
+          {
+            id: 'u_demo_2',
+            name: 'Trần Minh Quân',
+            username: 'quan_tm',
+            password: '123',
+            role: 'student',
+            avatar: '🐯',
+            createdAt: '18/01/2025',
+            lastLogin: new Date().toISOString()
+          },
+          {
+            id: 'u_demo_3',
+            name: 'Lê Bảo Anh',
+            username: 'baoanh_le',
+            password: '123',
+            role: 'student',
+            avatar: '🐼',
+            createdAt: '22/01/2025',
+            lastLogin: new Date().toISOString()
+          }
+        ];
+
+        const hsk1Words = typeof getWords === 'function' ? getWords(1) : [];
+        if (hsk1Words.length) {
+          const prog1 = {};
+          hsk1Words.slice(0, 48).forEach(w => { prog1[`1-${w.id}`] = 'know'; });
+          localStorage.setItem('hsk_user_u_demo_1_progress', JSON.stringify(prog1));
+          localStorage.setItem('hsk_user_u_demo_1_streak', JSON.stringify({ streak: 5, lastDate: new Date().toISOString().slice(0, 10) }));
+          localStorage.setItem('hsk_user_u_demo_1_quiz_stats', JSON.stringify({ totalQuizzes: 4, totalQuestions: 40, totalScore: 36 }));
+
+          const prog2 = {};
+          hsk1Words.slice(0, 115).forEach(w => { prog2[`1-${w.id}`] = 'know'; });
+          localStorage.setItem('hsk_user_u_demo_2_progress', JSON.stringify(prog2));
+          localStorage.setItem('hsk_user_u_demo_2_streak', JSON.stringify({ streak: 12, lastDate: new Date().toISOString().slice(0, 10) }));
+          localStorage.setItem('hsk_user_u_demo_2_quiz_stats', JSON.stringify({ totalQuizzes: 9, totalQuestions: 90, totalScore: 84 }));
+
+          const prog3 = {};
+          hsk1Words.slice(0, 25).forEach(w => { prog3[`1-${w.id}`] = 'know'; });
+          localStorage.setItem('hsk_user_u_demo_3_progress', JSON.stringify(prog3));
+          localStorage.setItem('hsk_user_u_demo_3_streak', JSON.stringify({ streak: 2, lastDate: new Date().toISOString().slice(0, 10) }));
+          localStorage.setItem('hsk_user_u_demo_3_quiz_stats', JSON.stringify({ totalQuizzes: 2, totalQuestions: 20, totalScore: 18 }));
+        }
+
+        users.push(...demoStudents);
+        Auth.saveUsers(users);
+      }
+    } catch (e) {
+      console.error('Demo students seed error:', e);
+    }
   }
 };
 
@@ -1891,7 +1956,10 @@ function renderAdminStudents() {
         <td><b>${quizStats.totalQuizzes}</b> bài</td>
         <td>🔥 <b>${streak}</b> ngày</td>
         <td>
-          <button class="tts-btn" onclick="viewStudentDetail('${u.id}')" style="padding:6px 12px;font-size:12px;font-weight:700">🔍 Chi tiết</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="tts-btn" onclick="viewStudentDetail('${u.id}')" style="padding:6px 10px;font-size:12px;font-weight:700" title="Xem chi tiết tiến độ">🔍 Chi tiết</button>
+            <button class="action-btn" onclick="deleteStudentAccount('${u.id}')" style="background:#FFF1F2;color:var(--brand);border:1px solid #FECDD3;padding:6px 10px;font-size:12px" title="Xóa tài khoản học viên">🗑️</button>
+          </div>
         </td>
       </tr>
     `;
@@ -1962,6 +2030,81 @@ function viewStudentDetail(userId) {
 
 function closeAdminStudentModal() {
   document.getElementById('admin-student-modal')?.classList.remove('open');
+}
+
+let selectedAdmStudentAvatar = '🐼';
+
+function openCreateStudentModal() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  const modal = document.getElementById('create-student-modal');
+  if (!modal) return;
+  document.getElementById('form-create-student')?.reset();
+  selectedAdmStudentAvatar = '🐼';
+  document.querySelectorAll('#adm-avatar-picker-grid .avatar-opt').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === 0);
+  });
+  modal.classList.add('open');
+}
+
+function closeCreateStudentModal() {
+  document.getElementById('create-student-modal')?.classList.remove('open');
+}
+
+function handleCreateStudentSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('adm-new-name').value.trim();
+  const username = document.getElementById('adm-new-username').value.trim().toLowerCase();
+  const password = document.getElementById('adm-new-password').value;
+  const avatar = selectedAdmStudentAvatar || '🐼';
+
+  if (!name || !username || !password) {
+    showToast('⚠️ Vui lòng điền đủ thông tin học viên!');
+    return;
+  }
+
+  const users = Auth.getUsers();
+  if (users.some(u => u.username.toLowerCase() === username)) {
+    showToast('⚠️ Tên đăng nhập này đã được sử dụng!');
+    return;
+  }
+
+  const newStudent = {
+    id: 'u_' + Date.now(),
+    name,
+    username,
+    password,
+    role: 'student',
+    avatar,
+    createdAt: new Date().toLocaleDateString('vi-VN'),
+    lastLogin: null
+  };
+
+  users.push(newStudent);
+  Auth.saveUsers(users);
+  closeCreateStudentModal();
+  document.getElementById('form-create-student')?.reset();
+  renderAdmin();
+  showToast(`🎉 Đã thêm thành công học viên ${name}!`);
+}
+
+function deleteStudentAccount(userId) {
+  const users = Auth.getUsers();
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa tài khoản học viên "${u.name}" (@${u.username}) không?\n\nToàn bộ tiến độ và kết quả làm bài của học viên này sẽ bị xóa vĩnh viễn.`)) {
+    return;
+  }
+  const remaining = users.filter(x => x.id !== userId);
+  Auth.saveUsers(remaining);
+  try {
+    localStorage.removeItem(`hsk_user_${userId}_progress`);
+    localStorage.removeItem(`hsk_user_${userId}_srs`);
+    localStorage.removeItem(`hsk_user_${userId}_streak`);
+    localStorage.removeItem(`hsk_user_${userId}_quiz_stats`);
+    localStorage.removeItem(`hsk_user_${userId}_read_notifs`);
+  } catch {}
+  renderAdmin();
+  showToast(`🗑️ Đã xóa tài khoản học viên ${u.name}!`);
 }
 
 function renderAdminAssignments() {
@@ -2051,6 +2194,7 @@ function deleteAnnouncement(id) {
 }
 
 function openCreateAssignmentModal() {
+  document.getElementById('sidebar')?.classList.remove('open');
   const modal = document.getElementById('create-assignment-modal');
   if (!modal) return;
   modal.classList.add('open');
@@ -2099,10 +2243,12 @@ function handleCreateAssignmentSubmit(e) {
   renderAdminAssignments();
   renderDashboardAssignments();
   updateNotifBadge();
+  switchAdminTab('assignments');
   showToast('🎉 Đã giao bài tập mới thành công!');
 }
 
 function openCreateAnnouncementModal() {
+  document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('create-announcement-modal')?.classList.add('open');
 }
 
@@ -2131,10 +2277,12 @@ function handleCreateAnnouncementSubmit(e) {
   document.getElementById('form-create-announcement')?.reset();
   renderAdminAnnouncements();
   updateNotifBadge();
+  switchAdminTab('announcements');
   showToast('📢 Đã đăng thông báo mới!');
 }
 
 function openClassExportModal() {
+  document.getElementById('sidebar')?.classList.remove('open');
   const modal = document.getElementById('class-sync-modal');
   if (!modal) return;
   modal.classList.add('open');
@@ -2142,6 +2290,7 @@ function openClassExportModal() {
 }
 
 function openStudentSyncModal() {
+  document.getElementById('sidebar')?.classList.remove('open');
   const modal = document.getElementById('class-sync-modal');
   if (!modal) return;
   modal.classList.add('open');
@@ -2577,6 +2726,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Admin Student Avatar picker listener
+  document.querySelectorAll('#adm-avatar-picker-grid .avatar-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#adm-avatar-picker-grid .avatar-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedAdmStudentAvatar = btn.dataset.avatar;
+    });
+  });
+
   // Modal overlay click to close
   document.getElementById('auth-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAuthModal();
@@ -2586,6 +2744,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('notif-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeNotifModal();
+  });
+  document.getElementById('create-student-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateStudentModal();
   });
   document.getElementById('create-assignment-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeCreateAssignmentModal();
