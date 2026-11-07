@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=3.0" />
+  <link rel="stylesheet" href="style.css?v=4.0" />
 </head>
 <body>
 
@@ -42,7 +42,20 @@
       <button class="nav-item" data-page="srs">
         <span class="nav-icon">🔁</span> Ôn tập SRS
       </button>
+      <button class="nav-item" data-page="profile">
+        <span class="nav-icon">👤</span> Hồ sơ học viên
+      </button>
     </div>
+
+    <!-- Student mini badge in sidebar -->
+    <div class="sidebar-user-card" id="sidebar-user-card" onclick="openAuthOrProfile()">
+      <div class="user-avatar-badge" id="sidebar-avatar">🐼</div>
+      <div class="user-info-text">
+        <div class="user-name-display" id="sidebar-name">Chưa đăng nhập</div>
+        <div class="user-sub-display" id="sidebar-sub">Bấm để đăng nhập / đăng ký</div>
+      </div>
+    </div>
+
     <div class="sidebar-footer">phuongthaoHSK3.0@</div>
   </nav>
 
@@ -58,6 +71,10 @@
       <div class="topbar-right">
         <button class="level-select" id="level-btn">
           📊 Cấp độ: <span id="level-label">Tất cả</span> ▾
+        </button>
+        <button class="user-top-btn" id="topbar-user-btn" onclick="openAuthOrProfile()" title="Tài khoản học viên">
+          <span class="topbar-avatar" id="topbar-avatar">🐼</span>
+          <span class="topbar-username" id="topbar-name">Đăng nhập</span>
         </button>
       </div>
     </header>
@@ -451,9 +468,69 @@
         </div>
       </section>
 
-      <!-- ══ PAGE: SRS ══ -->
-      <section id="page-srs" class="page-section hidden">
-        <div id="srs-content"></div>
+      <!-- ══ PAGE: PROFILE (HỒ SƠ HỌC VIÊN) ══ -->
+      <section id="page-profile" class="page-section hidden">
+        <!-- Profile Header Card -->
+        <div class="card profile-header-card" style="margin-bottom:24px">
+          <div class="profile-hero">
+            <div class="profile-avatar-large" id="prof-avatar">🐼</div>
+            <div class="profile-hero-info">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h2 class="profile-name" id="prof-name">Chưa đăng nhập</h2>
+                <span class="badge" id="prof-username-badge" style="background:var(--brand-light);color:var(--brand)">@khach</span>
+                <span class="badge" id="prof-status-badge" style="background:#ECFDF5;color:#059669">● Sẵn sàng học</span>
+              </div>
+              <div class="profile-meta-text" id="prof-meta">Tham gia: Hôm nay • Chuỗi học: 0 ngày</div>
+            </div>
+            <div class="profile-hero-actions">
+              <button class="action-btn" id="btn-open-backup" onclick="openBackupModal()" style="background:var(--surface2);border:1px solid var(--border);padding:10px 16px;font-size:13px">
+                📤 Sao lưu & Đồng bộ
+              </button>
+              <button class="action-btn primary" id="btn-prof-auth-action" onclick="openAuthModal()" style="padding:10px 16px;font-size:13px">
+                🔑 Đăng nhập / Đăng ký
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overview stats -->
+        <div class="dashboard-grid" style="margin-bottom:28px">
+          <div class="stat-card">
+            <div class="stat-icon">📖</div>
+            <div class="stat-value" id="prof-learned-count">0</div>
+            <div class="stat-label">Từ đã thuộc (toàn khóa)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value" id="prof-progress-pct">0%</div>
+            <div class="stat-label">Tiến độ HSK tổng</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔁</div>
+            <div class="stat-value" id="prof-srs-due">0</div>
+            <div class="stat-label">Từ cần ôn hôm nay (SRS)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-value" id="prof-streak">0</div>
+            <div class="stat-label">Ngày học liên tiếp</div>
+          </div>
+        </div>
+
+        <!-- Chi tiết 9 cấp độ HSK -->
+        <div class="card" style="margin-bottom:28px">
+          <h3 style="font-size:18px;font-weight:800;margin-bottom:18px;color:#0F172A">📊 Chi tiết tiến độ 9 cấp độ HSK</h3>
+          <div class="profile-levels-list" id="prof-levels-list"></div>
+        </div>
+
+        <!-- Danh sách học viên trên thiết bị này -->
+        <div class="card" id="card-other-accounts">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <h3 style="font-size:16px;font-weight:800;color:#0F172A">👥 Danh sách học viên trên thiết bị này</h3>
+            <button class="action-btn primary" onclick="openAuthModal('register')" style="padding:8px 16px;font-size:12px">➕ Thêm học viên mới</button>
+          </div>
+          <div class="accounts-grid" id="prof-accounts-list"></div>
+        </div>
       </section>
 
     </main><!-- /content -->
@@ -480,6 +557,122 @@
   </div>
 </div>
 
+<!-- Auth Modal (Đăng nhập / Đăng ký) -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal-box auth-modal-box">
+    <div class="auth-header">
+      <div class="auth-logo">🀄</div>
+      <h3 class="auth-title" id="auth-modal-title">Tài Khoản Học Viên</h3>
+      <p class="auth-subtitle">Lưu trữ và theo dõi tiến độ học tiếng Trung riêng biệt</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="tab-auth-login" onclick="switchAuthTab('login')">Đăng nhập</button>
+      <button class="auth-tab-btn" id="tab-auth-register" onclick="switchAuthTab('register')">Đăng ký mới</button>
+    </div>
+
+    <!-- Form: Đăng nhập -->
+    <form id="form-login" onsubmit="handleLoginSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập / Email</label>
+        <input type="text" class="form-input" id="login-username" placeholder="Ví dụ: phuongthao" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu</label>
+        <input type="password" class="form-input" id="login-password" placeholder="Nhập mật khẩu của bạn" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="action-btn primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px">
+        🚀 Đăng Nhập
+      </button>
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">
+        Chưa có tài khoản? <a href="javascript:void(0)" onclick="switchAuthTab('register')" style="color:var(--brand);font-weight:700">Đăng ký ngay</a>
+      </div>
+    </form>
+
+    <!-- Form: Đăng ký -->
+    <form id="form-register" class="hidden" onsubmit="handleRegisterSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Họ và tên học viên</label>
+        <input type="text" class="form-input" id="reg-name" placeholder="Ví dụ: Phương Thảo" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập (viết liền không dấu)</label>
+        <input type="text" class="form-input" id="reg-username" placeholder="Ví dụ: phuongthao99" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu</label>
+        <input type="password" class="form-input" id="reg-password" placeholder="Tối thiểu 4 ký tự" required minlength="4" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Chọn hình đại diện (Avatar)</label>
+        <div class="avatar-picker-grid" id="avatar-picker-grid">
+          <button type="button" class="avatar-opt active" data-avatar="🐼">🐼</button>
+          <button type="button" class="avatar-opt" data-avatar="🐯">🐯</button>
+          <button type="button" class="avatar-opt" data-avatar="🐉">🐉</button>
+          <button type="button" class="avatar-opt" data-avatar="🦊">🦊</button>
+          <button type="button" class="avatar-opt" data-avatar="🌸">🌸</button>
+          <button type="button" class="avatar-opt" data-avatar="🥋">🥋</button>
+          <button type="button" class="avatar-opt" data-avatar="🏮">🏮</button>
+          <button type="button" class="avatar-opt" data-avatar="⭐">⭐</button>
+        </div>
+      </div>
+      <button type="submit" class="action-btn primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px">
+        🎉 Tạo Tài Khoản & Bắt Đầu Học
+      </button>
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">
+        Đã có tài khoản? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:var(--brand);font-weight:700">Đăng nhập</a>
+      </div>
+    </form>
+
+    <button type="button" class="modal-close" style="margin-top:16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeAuthModal()">Đóng</button>
+  </div>
+</div>
+
+<!-- Backup / Restore Modal -->
+<div class="modal-overlay" id="backup-modal">
+  <div class="modal-box" style="width:480px">
+    <div class="auth-header">
+      <div class="auth-logo">📲</div>
+      <h3 class="auth-title">Sao Lưu & Đồng Bộ Tiến Độ</h3>
+      <p class="auth-subtitle">Chuyển dữ liệu học giữa máy tính và điện thoại dễ dàng</p>
+    </div>
+
+    <div class="auth-tabs" style="margin-bottom:16px">
+      <button class="auth-tab-btn active" id="tab-backup-export" onclick="switchBackupTab('export')">📤 Xuất dữ liệu</button>
+      <button class="auth-tab-btn" id="tab-backup-import" onclick="switchBackupTab('import')">📥 Nhập dữ liệu</button>
+    </div>
+
+    <!-- Panel Xuất -->
+    <div id="panel-backup-export">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+        Sao chép đoạn mã bên dưới hoặc tải file để gửi qua Zalo / Messenger sang điện thoại:
+      </p>
+      <textarea id="export-code-box" readonly style="width:100%;height:120px;padding:12px;font-family:monospace;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--surface2);resize:none;margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px">
+        <button class="action-btn primary" onclick="copyBackupCode()" style="flex:1;padding:12px">📋 Sao chép mã</button>
+        <button class="action-btn" onclick="downloadBackupFile()" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border)">💾 Tải file JSON</button>
+      </div>
+    </div>
+
+    <!-- Panel Nhập -->
+    <div id="panel-backup-import" class="hidden">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+        Dán mã tiến độ bạn đã sao chép từ thiết bị kia vào đây, hoặc chọn file JSON:
+      </p>
+      <textarea id="import-code-box" placeholder="Dán mã sao lưu vào đây..." style="width:100%;height:100px;padding:12px;font-family:monospace;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-xs);background:#fff;resize:none;margin-bottom:12px"></textarea>
+      <div style="margin-bottom:14px">
+        <input type="file" id="import-file-input" accept=".json" style="font-size:12px" onchange="handleBackupFileUpload(event)" />
+      </div>
+      <button class="action-btn primary" onclick="applyBackupImport()" style="width:100%;padding:14px">
+        📥 Khôi Phục Tiến Độ Ngay
+      </button>
+    </div>
+
+    <button type="button" class="modal-close" style="margin-top:16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeBackupModal()">Đóng</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -492,9 +685,9 @@
 </script>
 
 <!-- Scripts — data TRƯỚC, app SAU -->
-<script src="data/hsk_data.js?v=3.0"></script>
-<script src="data/radicals_data.js?v=3.0"></script>
-<script src="data/strokes_cache.js?v=3.0"></script>
-<script src="app.js?v=3.0"></script>
+<script src="data/hsk_data.js?v=4.0"></script>
+<script src="data/radicals_data.js?v=4.0"></script>
+<script src="data/strokes_cache.js?v=4.0"></script>
+<script src="app.js?v=4.0"></script>
 </body>
 </html>

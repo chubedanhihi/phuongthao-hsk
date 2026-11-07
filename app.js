@@ -32,14 +32,223 @@ const State = {
 };
 
 /* ═══════════════════════════════════════════
-   PERSISTENCE
+   AUTHENTICATION & MULTI-USER SYSTEM
+   ═══════════════════════════════════════════ */
+const Auth = {
+  getUsers() {
+    try {
+      return JSON.parse(localStorage.getItem('hsk_users_list')) || [];
+    } catch {
+      return [];
+    }
+  },
+  saveUsers(users) {
+    localStorage.setItem('hsk_users_list', JSON.stringify(users));
+  },
+  getActiveUserId() {
+    return localStorage.getItem('hsk_active_user_id') || null;
+  },
+  setActiveUserId(id) {
+    if (id) {
+      localStorage.setItem('hsk_active_user_id', id);
+    } else {
+      localStorage.removeItem('hsk_active_user_id');
+    }
+  },
+  getCurrentUser() {
+    const activeId = this.getActiveUserId();
+    if (!activeId) return null;
+    const users = this.getUsers();
+    return users.find(u => u.id === activeId) || null;
+  },
+  register(name, username, password, avatar = '🐼') {
+    const cleanUser = username.trim().toLowerCase();
+    const cleanName = name.trim();
+    if (!cleanUser || !cleanName || !password) {
+      showToast('⚠️ Vui lòng điền đầy đủ thông tin!');
+      return false;
+    }
+    const users = this.getUsers();
+    if (users.some(u => u.username.toLowerCase() === cleanUser)) {
+      showToast('⚠️ Tên đăng nhập này đã được sử dụng!');
+      return false;
+    }
+
+    const newUser = {
+      id: 'u_' + Date.now(),
+      name: cleanName,
+      username: cleanUser,
+      password: password,
+      avatar: avatar || '🐼',
+      createdAt: new Date().toLocaleDateString('vi-VN'),
+      lastLogin: new Date().toISOString()
+    };
+
+    // Tự động chuyển tiến độ khách hiện tại vào tài khoản này nếu có
+    const guestProgress = localStorage.getItem('hsk_progress');
+    const guestSrs = localStorage.getItem('hsk_srs');
+    const guestStreak = localStorage.getItem('hsk_streak');
+
+    if (guestProgress && !localStorage.getItem(`hsk_user_${newUser.id}_progress`)) {
+      localStorage.setItem(`hsk_user_${newUser.id}_progress`, guestProgress);
+    }
+    if (guestSrs && !localStorage.getItem(`hsk_user_${newUser.id}_srs`)) {
+      localStorage.setItem(`hsk_user_${newUser.id}_srs`, guestSrs);
+    }
+    if (guestStreak && !localStorage.getItem(`hsk_user_${newUser.id}_streak`)) {
+      localStorage.setItem(`hsk_user_${newUser.id}_streak`, guestStreak);
+    }
+
+    users.push(newUser);
+    this.saveUsers(users);
+    this.setActiveUserId(newUser.id);
+    Storage.load();
+    updateAuthDisplay();
+    renderDashboard();
+    renderProfile();
+    showToast(`🎉 Chào mừng học viên ${cleanName} gia nhập HSK Learn!`);
+    return true;
+  },
+  login(username, password) {
+    const cleanUser = username.trim().toLowerCase();
+    const users = this.getUsers();
+    const user = users.find(u => u.username.toLowerCase() === cleanUser && u.password === password);
+    if (!user) {
+      showToast('❌ Tên đăng nhập hoặc mật khẩu không chính xác!');
+      return false;
+    }
+    user.lastLogin = new Date().toISOString();
+    this.saveUsers(users);
+    this.setActiveUserId(user.id);
+    Storage.load();
+    updateAuthDisplay();
+    renderDashboard();
+    renderProfile();
+    showToast(`👋 Chào mừng trở lại, ${user.name}!`);
+    return true;
+  },
+  logout() {
+    const curr = this.getCurrentUser();
+    const name = curr ? curr.name : '';
+    this.setActiveUserId(null);
+    State.progress = {};
+    State.srsQueue = [];
+    Storage.load(); // tải tiến độ mặc định/khách
+    updateAuthDisplay();
+    renderDashboard();
+    renderProfile();
+    showToast(`🚪 Đã đăng xuất khỏi tài khoản ${name}!`);
+    setPage('dashboard');
+  },
+  switchUser(userId) {
+    const users = this.getUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    this.setActiveUserId(userId);
+    Storage.load();
+    updateAuthDisplay();
+    renderDashboard();
+    renderProfile();
+    showToast(`🔄 Đã chuyển sang học viên: ${user.name}`);
+  },
+  exportData() {
+    const user = this.getCurrentUser();
+    const data = {
+      version: 'HSK_3.0',
+      exportedAt: new Date().toISOString(),
+      user: user || { id: 'guest', name: 'Khách', username: 'guest', avatar: '🐼' },
+      progress: State.progress,
+      srsQueue: State.srsQueue,
+      streak: getStreak(),
+      quizStats: Storage.getQuizStats()
+    };
+    return JSON.stringify(data, null, 2);
+  },
+  importData(jsonString) {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data || typeof data !== 'object') throw new Error('Dữ liệu không hợp lệ');
+
+      let targetUser = this.getCurrentUser();
+      if (!targetUser && data.user && data.user.username) {
+        // Tạo tài khoản từ bản sao lưu nếu chưa có
+        const users = this.getUsers();
+        let existing = users.find(u => u.username === data.user.username);
+        if (!existing) {
+          existing = {
+            id: 'u_' + Date.now(),
+            name: data.user.name || 'Học viên',
+            username: data.user.username || ('user_' + Date.now()),
+            password: data.user.password || '1234',
+            avatar: data.user.avatar || '🐼',
+            createdAt: new Date().toLocaleDateString('vi-VN')
+          };
+          users.push(existing);
+          this.saveUsers(users);
+        }
+        this.setActiveUserId(existing.id);
+        targetUser = existing;
+      }
+
+      if (data.progress) State.progress = data.progress;
+      if (data.srsQueue) State.srsQueue = data.srsQueue;
+      if (data.streak !== undefined) {
+        const uId = targetUser ? targetUser.id : null;
+        const key = uId ? `hsk_user_${uId}_streak` : 'hsk_streak';
+        localStorage.setItem(key, JSON.stringify({ streak: data.streak, last: new Date().toDateString() }));
+      }
+      if (data.quizStats) {
+        Storage.saveQuizStats(data.quizStats);
+      }
+      Storage.save();
+      updateAuthDisplay();
+      renderDashboard();
+      renderProfile();
+      return true;
+    } catch (e) {
+      showToast('❌ Mã sao lưu không đúng định dạng!');
+      return false;
+    }
+  }
+};
+
+/* ═══════════════════════════════════════════
+   PERSISTENCE (ĐỘC LẬP THEO TỪNG HỌC VIÊN)
    ═══════════════════════════════════════════ */
 const Storage = {
-  save()  { localStorage.setItem('hsk_progress', JSON.stringify(State.progress)); localStorage.setItem('hsk_srs', JSON.stringify(State.srsQueue)); },
-  load()  {
-    try { State.progress = JSON.parse(localStorage.getItem('hsk_progress')) || {}; } catch { State.progress = {}; }
-    try { State.srsQueue  = JSON.parse(localStorage.getItem('hsk_srs'))      || []; } catch { State.srsQueue = []; }
+  getUserPrefix() {
+    const id = Auth.getActiveUserId();
+    return id ? `hsk_user_${id}_` : 'hsk_';
   },
+  save() {
+    const prefix = this.getUserPrefix();
+    localStorage.setItem(prefix + 'progress', JSON.stringify(State.progress));
+    localStorage.setItem(prefix + 'srs', JSON.stringify(State.srsQueue));
+  },
+  load() {
+    const prefix = this.getUserPrefix();
+    try { State.progress = JSON.parse(localStorage.getItem(prefix + 'progress')) || {}; } catch { State.progress = {}; }
+    try { State.srsQueue  = JSON.parse(localStorage.getItem(prefix + 'srs'))      || []; } catch { State.srsQueue = []; }
+  },
+  getQuizStats() {
+    const prefix = this.getUserPrefix();
+    try {
+      return JSON.parse(localStorage.getItem(prefix + 'quiz_stats')) || { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 };
+    } catch {
+      return { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 };
+    }
+  },
+  saveQuizStats(stats) {
+    const prefix = this.getUserPrefix();
+    localStorage.setItem(prefix + 'quiz_stats', JSON.stringify(stats));
+  },
+  recordQuizResult(score, total) {
+    const stats = this.getQuizStats();
+    stats.totalQuizzes += 1;
+    stats.totalQuestions += total;
+    stats.totalScore += score;
+    this.saveQuizStats(stats);
+  }
 };
 
 /* ═══════════════════════════════════════════
@@ -113,7 +322,8 @@ function setPage(page, keepCustomWords = false) {
     dictionary:'🔍 Từ điển',
     strokes:   '✍️ Luyện viết chữ & Bộ thủ',
     srs:       '🔁 Ôn tập SRS',
-  }[page];
+    profile:   '👤 Hồ sơ học viên',
+  }[page] || '🏠 Tổng quan';
   // init each section
   if (page === 'dashboard')  renderDashboard();
   if (page === 'flashcard' && !keepCustomWords) {
@@ -124,6 +334,7 @@ function setPage(page, keepCustomWords = false) {
   if (page === 'dictionary') renderDictionary();
   if (page === 'strokes')    initStrokes();
   if (page === 'srs')        renderSRS();
+  if (page === 'profile')    renderProfile();
   // close sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -160,20 +371,21 @@ function renderDashboard() {
 }
 
 function getStreak() {
-  // Simple streak from localStorage
-  const data = JSON.parse(localStorage.getItem('hsk_streak') || '{"streak":0,"last":""}');
+  const prefix = Storage.getUserPrefix();
+  const data = JSON.parse(localStorage.getItem(prefix + 'streak') || '{"streak":0,"last":""}');
   const today = new Date().toDateString();
   if (data.last === today) return data.streak;
-  return data.streak; // shown as-is; updated on learn
+  return data.streak;
 }
 function bumpStreak() {
-  const data = JSON.parse(localStorage.getItem('hsk_streak') || '{"streak":0,"last":""}');
+  const prefix = Storage.getUserPrefix();
+  const data = JSON.parse(localStorage.getItem(prefix + 'streak') || '{"streak":0,"last":""}');
   const today = new Date().toDateString();
   if (data.last === today) return;
   const yest = new Date(); yest.setDate(yest.getDate() - 1);
   data.streak = data.last === yest.toDateString() ? data.streak + 1 : 1;
   data.last = today;
-  localStorage.setItem('hsk_streak', JSON.stringify(data));
+  localStorage.setItem(prefix + 'streak', JSON.stringify(data));
 }
 
 function selectLevel(lv) {
@@ -533,6 +745,9 @@ function showQuizResult() {
   } else {
     retryBtn.style.display = 'none';
   }
+
+  // Ghi nhận thống kê bài kiểm tra cho học viên
+  Storage.recordQuizResult(score, total);
 }
 
 /* ═══════════════════════════════════════════
@@ -987,11 +1202,271 @@ function updateLevelDisplay() {
   document.getElementById('level-label').textContent = lv === 'all' ? 'Tất cả' : levelName(lv);
 }
 
+let selectedRegAvatar = '🐼';
+
+function updateAuthDisplay() {
+  const user = Auth.getCurrentUser();
+  const sideAvatar = document.getElementById('sidebar-avatar');
+  const sideName = document.getElementById('sidebar-name');
+  const sideSub = document.getElementById('sidebar-sub');
+
+  const topAvatar = document.getElementById('topbar-avatar');
+  const topName = document.getElementById('topbar-name');
+
+  if (user) {
+    if (sideAvatar) sideAvatar.textContent = user.avatar || '🐼';
+    if (sideName) sideName.textContent = user.name;
+    if (sideSub) sideSub.textContent = `Học viên • @${user.username}`;
+    if (topAvatar) topAvatar.textContent = user.avatar || '🐼';
+    if (topName) topName.textContent = user.name;
+  } else {
+    if (sideAvatar) sideAvatar.textContent = '👤';
+    if (sideName) sideName.textContent = 'Chưa đăng nhập';
+    if (sideSub) sideSub.textContent = 'Bấm để đăng nhập / đăng ký';
+    if (topAvatar) topAvatar.textContent = '👤';
+    if (topName) topName.textContent = 'Đăng nhập';
+  }
+}
+
+function renderProfile() {
+  const user = Auth.getCurrentUser();
+  const profAvatar = document.getElementById('prof-avatar');
+  const profName = document.getElementById('prof-name');
+  const profUserBadge = document.getElementById('prof-username-badge');
+  const profStatusBadge = document.getElementById('prof-status-badge');
+  const profMeta = document.getElementById('prof-meta');
+  const authActionBtn = document.getElementById('btn-prof-auth-action');
+
+  const learnedCountAll = Object.values(State.progress).filter(v => v === 'know').length;
+  const totalWords = ALL_WORDS.length;
+  const totalPct = totalWords ? Math.round(learnedCountAll / totalWords * 100) : 0;
+  const now = Date.now();
+  const dueCount = State.srsQueue.filter(s => new Date(s.nextReview).getTime() <= now).length;
+  const streak = getStreak();
+  const quizStats = Storage.getQuizStats();
+
+  document.getElementById('prof-learned-count').textContent = `${learnedCountAll} / ${totalWords}`;
+  document.getElementById('prof-progress-pct').textContent = `${totalPct}%`;
+  document.getElementById('prof-srs-due').textContent = dueCount;
+  document.getElementById('prof-streak').textContent = `${streak} ngày 🔥`;
+
+  if (user) {
+    if (profAvatar) profAvatar.textContent = user.avatar || '🐼';
+    if (profName) profName.textContent = user.name;
+    if (profUserBadge) profUserBadge.textContent = `@${user.username}`;
+    if (profStatusBadge) {
+      profStatusBadge.textContent = '● Đang hoạt động';
+      profStatusBadge.style.background = '#ECFDF5';
+      profStatusBadge.style.color = '#059669';
+    }
+    if (profMeta) profMeta.textContent = `Tham gia: ${user.createdAt || 'Gần đây'} • Đã làm ${quizStats.totalQuizzes} bài test`;
+    if (authActionBtn) {
+      authActionBtn.textContent = '🚪 Đăng xuất';
+      authActionBtn.className = 'action-btn warn';
+      authActionBtn.onclick = () => Auth.logout();
+    }
+  } else {
+    if (profAvatar) profAvatar.textContent = '👤';
+    if (profName) profName.textContent = 'Học viên Khách';
+    if (profUserBadge) profUserBadge.textContent = '@khach';
+    if (profStatusBadge) {
+      profStatusBadge.textContent = '● Chưa đăng nhập';
+      profStatusBadge.style.background = '#FEF3C7';
+      profStatusBadge.style.color = '#B45309';
+    }
+    if (profMeta) profMeta.textContent = 'Đăng ký tài khoản để theo dõi tiến độ học tập riêng biệt';
+    if (authActionBtn) {
+      authActionBtn.textContent = '🔑 Đăng nhập / Đăng ký';
+      authActionBtn.className = 'action-btn primary';
+      authActionBtn.onclick = () => openAuthModal('login');
+    }
+  }
+
+  // 9 Cấp độ HSK thanh tiến độ
+  const levelsListEl = document.getElementById('prof-levels-list');
+  if (levelsListEl) {
+    levelsListEl.innerHTML = '';
+    for (let lv = 1; lv <= 9; lv++) {
+      const words = getWords(lv);
+      const cnt = words.length;
+      const done = learnedCount(lv);
+      const pct = cnt ? Math.round(done / cnt * 100) : 0;
+      const bg = levelColor(lv);
+      levelsListEl.innerHTML += `
+        <div class="profile-level-row">
+          <div class="profile-lv-tag" style="background:${bg}">HSK ${lv}</div>
+          <div class="profile-lv-info">
+            <div class="profile-lv-text">
+              <span>Đã thuộc: <b>${done}/${cnt}</b> từ</span>
+              <span style="color:${bg}">${pct}%</span>
+            </div>
+            <div class="profile-lv-bar-wrap">
+              <div class="profile-lv-bar-fill" style="width:${pct}%;background:${bg}"></div>
+            </div>
+          </div>
+          <button class="tts-btn" style="padding:6px 12px;font-size:12px;font-weight:700" onclick="selectLevel(${lv})" title="Học Flashcard HSK ${lv}">Học ngay →</button>
+        </div>
+      `;
+    }
+  }
+
+  // Danh sách các học viên trên máy
+  const accountsEl = document.getElementById('prof-accounts-list');
+  if (accountsEl) {
+    const users = Auth.getUsers();
+    if (!users.length) {
+      accountsEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:12px">Chưa có tài khoản nào được tạo trên thiết bị này.</div>';
+    } else {
+      const currId = Auth.getActiveUserId();
+      accountsEl.innerHTML = users.map(u => {
+        const isCurrent = u.id === currId;
+        return `
+          <div class="account-item-card ${isCurrent ? 'current' : ''}" onclick="Auth.switchUser('${u.id}')">
+            <div class="user-avatar-badge">${u.avatar || '🐼'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:800;font-size:14px;color:#0F172A">${u.name} ${isCurrent ? '<span style="color:var(--brand);font-size:11px">(Đang học)</span>' : ''}</div>
+              <div style="font-size:12px;color:var(--text-muted)">@${u.username}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+function openAuthOrProfile() {
+  if (Auth.getCurrentUser()) {
+    setPage('profile');
+  } else {
+    openAuthModal('login');
+  }
+}
+
+function openAuthModal(tab = 'login') {
+  const modal = document.getElementById('auth-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  switchAuthTab(tab);
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal')?.classList.remove('open');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-auth-login')?.classList.toggle('active', tab === 'login');
+  document.getElementById('tab-auth-register')?.classList.toggle('active', tab === 'register');
+  document.getElementById('form-login')?.classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-register')?.classList.toggle('hidden', tab !== 'register');
+  const title = document.getElementById('auth-modal-title');
+  if (title) title.textContent = tab === 'login' ? 'Đăng Nhập Học Viên' : 'Đăng Ký Học Viên Mới';
+}
+
+function handleLoginSubmit(e) {
+  e.preventDefault();
+  const u = document.getElementById('login-username').value;
+  const p = document.getElementById('login-password').value;
+  if (Auth.login(u, p)) {
+    closeAuthModal();
+    setPage('profile');
+  }
+}
+
+function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value;
+  const u = document.getElementById('reg-username').value;
+  const p = document.getElementById('reg-password').value;
+  if (Auth.register(name, u, p, selectedRegAvatar)) {
+    closeAuthModal();
+    setPage('profile');
+  }
+}
+
+function openBackupModal() {
+  const modal = document.getElementById('backup-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  switchBackupTab('export');
+  const codeBox = document.getElementById('export-code-box');
+  if (codeBox) {
+    codeBox.value = Auth.exportData();
+  }
+}
+
+function closeBackupModal() {
+  document.getElementById('backup-modal')?.classList.remove('open');
+}
+
+function switchBackupTab(tab) {
+  document.getElementById('tab-backup-export')?.classList.toggle('active', tab === 'export');
+  document.getElementById('tab-backup-import')?.classList.toggle('active', tab === 'import');
+  document.getElementById('panel-backup-export')?.classList.toggle('hidden', tab !== 'export');
+  document.getElementById('panel-backup-import')?.classList.toggle('hidden', tab !== 'import');
+  if (tab === 'export') {
+    const codeBox = document.getElementById('export-code-box');
+    if (codeBox) codeBox.value = Auth.exportData();
+  }
+}
+
+function copyBackupCode() {
+  const box = document.getElementById('export-code-box');
+  if (!box) return;
+  box.select();
+  navigator.clipboard.writeText(box.value).then(() => {
+    showToast('📋 Đã sao chép mã tiến độ vào bộ nhớ tạm!');
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('📋 Đã sao chép mã tiến độ!');
+  });
+}
+
+function downloadBackupFile() {
+  const jsonStr = Auth.exportData();
+  const user = Auth.getCurrentUser();
+  const filename = `hsk_backup_${user ? user.username : 'guest'}_${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('💾 Đã tải file sao lưu về máy!');
+}
+
+function handleBackupFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    document.getElementById('import-code-box').value = evt.target.result;
+    showToast('📄 Đã nạp nội dung file sao lưu!');
+  };
+  reader.readAsText(file);
+}
+
+function applyBackupImport() {
+  const code = document.getElementById('import-code-box').value.trim();
+  if (!code) {
+    showToast('⚠️ Vui lòng dán mã hoặc chọn file sao lưu!');
+    return;
+  }
+  if (Auth.importData(code)) {
+    closeBackupModal();
+    showToast('🎉 Khôi phục toàn bộ tiến độ thành công!');
+    setPage('profile');
+  }
+}
+
 /* ═══════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   Storage.load();
+  updateAuthDisplay();
 
   // Nav clicks
   document.querySelectorAll('.nav-item').forEach(el => {
@@ -1192,6 +1667,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('radical-search-input')?.addEventListener('input', (e) => {
     renderRadicals(e.target.value);
+  });
+
+  // Avatar picker listener
+  document.querySelectorAll('#avatar-picker-grid .avatar-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#avatar-picker-grid .avatar-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRegAvatar = btn.dataset.avatar;
+    });
+  });
+
+  // Modal overlay click to close
+  document.getElementById('auth-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAuthModal();
+  });
+  document.getElementById('backup-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeBackupModal();
   });
 
   // Default page
