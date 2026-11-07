@@ -137,10 +137,14 @@ const Auth = {
     this.saveUsers(users);
     this.setActiveUserId(user.id);
     Storage.load();
-    updateAuthDisplay();
-    renderDashboard();
-    renderProfile();
-    showToast(`👋 Chào mừng trở lại, ${user.name}!`);
+    if (user.role === 'admin') {
+      setPage('admin');
+      showToast(`👑 Chào mừng Giáo viên ${user.name} vào Trang Quản Trị!`);
+    } else {
+      renderDashboard();
+      renderProfile();
+      showToast(`👋 Chào mừng trở lại, ${user.name}!`);
+    }
     return true;
   },
   logout() {
@@ -1416,33 +1420,50 @@ let selectedRegAvatar = '🐼';
 
 function updateAuthDisplay() {
   const user = Auth.getCurrentUser();
+  const isTeacher = user && user.role === 'admin';
+
+  const sideNavStudent = document.getElementById('sidebar-nav-student');
+  const sideNavTeacher = document.getElementById('sidebar-nav-teacher');
+  const logoText = document.getElementById('sidebar-logo-text');
+  const logoSub = document.getElementById('sidebar-logo-sub');
+  const levelBtn = document.getElementById('level-btn');
+  const notifBell = document.getElementById('btn-notif-bell');
+
+  if (isTeacher) {
+    if (sideNavStudent) sideNavStudent.classList.add('hidden');
+    if (sideNavTeacher) sideNavTeacher.classList.remove('hidden');
+    if (logoText) logoText.textContent = 'HSK Quản Trị';
+    if (logoSub) logoSub.textContent = 'Cổng Giáo Viên';
+    if (levelBtn) levelBtn.classList.add('hidden');
+    if (notifBell) notifBell.classList.add('hidden');
+  } else {
+    if (sideNavStudent) sideNavStudent.classList.remove('hidden');
+    if (sideNavTeacher) sideNavTeacher.classList.add('hidden');
+    if (logoText) logoText.textContent = 'HSK Learn';
+    if (logoSub) logoSub.textContent = 'Học tiếng Trung';
+    if (levelBtn) levelBtn.classList.remove('hidden');
+    if (notifBell) notifBell.classList.remove('hidden');
+  }
+
   const sideAvatar = document.getElementById('sidebar-avatar');
   const sideName = document.getElementById('sidebar-name');
   const sideSub = document.getElementById('sidebar-sub');
-
   const topAvatar = document.getElementById('topbar-avatar');
   const topName = document.getElementById('topbar-name');
-
-  const adminNav = document.getElementById('nav-item-admin');
-  if (adminNav) {
-    if (user && user.role === 'admin') {
-      adminNav.classList.remove('hidden');
-    } else {
-      adminNav.classList.add('hidden');
-    }
-  }
-
   const topLogoutBtn = document.getElementById('topbar-logout-btn');
   const sideLogoutBtn = document.getElementById('sidebar-logout-btn');
 
   if (user) {
-    if (topLogoutBtn) topLogoutBtn.classList.remove('hidden');
+    if (topLogoutBtn) {
+      topLogoutBtn.classList.remove('hidden');
+      topLogoutBtn.textContent = isTeacher ? '🚪 Đăng xuất quản trị' : '🚪 Đăng xuất';
+    }
     if (sideLogoutBtn) sideLogoutBtn.classList.remove('hidden');
-    if (sideAvatar) sideAvatar.textContent = user.avatar || '🐼';
+    if (sideAvatar) sideAvatar.textContent = user.avatar || (isTeacher ? '👑' : '🐼');
     if (sideName) sideName.textContent = user.name;
-    if (sideSub) sideSub.textContent = user.role === 'admin' ? `Giáo viên Quản trị • @${user.username}` : `Học viên • @${user.username}`;
-    if (topAvatar) topAvatar.textContent = user.avatar || '🐼';
-    if (topName) topName.textContent = user.name;
+    if (sideSub) sideSub.textContent = isTeacher ? `Giáo viên Quản trị • @${user.username}` : `Học viên • @${user.username}`;
+    if (topAvatar) topAvatar.textContent = user.avatar || (isTeacher ? '👑' : '🐼');
+    if (topName) topName.textContent = isTeacher ? 'Cô Phương Thảo (Quản trị)' : user.name;
   } else {
     if (topLogoutBtn) topLogoutBtn.classList.add('hidden');
     if (sideLogoutBtn) sideLogoutBtn.classList.add('hidden');
@@ -1563,17 +1584,78 @@ function renderProfile() {
 }
 
 function openAuthOrProfile() {
-  if (Auth.getCurrentUser()) {
-    setPage('profile');
+  const user = Auth.getCurrentUser();
+  if (user) {
+    if (user.role === 'admin') {
+      setPage('admin');
+    } else {
+      setPage('profile');
+    }
   } else {
-    openAuthModal('login');
+    openAuthModal('login', 'student');
   }
 }
 
-function openAuthModal(tab = 'login') {
+let currentAuthRole = 'student';
+
+function selectAuthRole(role) {
+  currentAuthRole = role;
+  const btnStudent = document.getElementById('role-btn-student');
+  const btnTeacher = document.getElementById('role-btn-teacher');
+  const title = document.getElementById('auth-modal-title');
+  const subtitle = document.getElementById('auth-modal-subtitle');
+  const logo = document.getElementById('auth-modal-logo');
+  const hint = document.getElementById('teacher-login-hint');
+  const regTab = document.getElementById('tab-auth-register');
+  const loginUser = document.getElementById('login-username');
+
+  if (role === 'teacher') {
+    if (btnStudent) {
+      btnStudent.style.borderColor = 'var(--border)';
+      btnStudent.style.background = '#FFFFFF';
+      btnStudent.style.color = 'var(--text-secondary)';
+      btnStudent.style.fontWeight = '700';
+    }
+    if (btnTeacher) {
+      btnTeacher.style.borderColor = 'var(--brand)';
+      btnTeacher.style.background = '#FFF1F2';
+      btnTeacher.style.color = 'var(--brand)';
+      btnTeacher.style.fontWeight = '800';
+    }
+    if (title) title.textContent = 'Cổng Đăng Nhập Giáo Viên';
+    if (subtitle) subtitle.textContent = 'Trang quản trị lớp học, quản lý học viên và bài tập';
+    if (logo) logo.textContent = '🛡️';
+    if (hint) hint.classList.remove('hidden');
+    if (regTab) regTab.style.display = 'none';
+    switchAuthTab('login');
+    if (loginUser && !loginUser.value) loginUser.value = 'admin';
+  } else {
+    if (btnStudent) {
+      btnStudent.style.borderColor = 'var(--brand)';
+      btnStudent.style.background = '#FFF1F2';
+      btnStudent.style.color = 'var(--brand)';
+      btnStudent.style.fontWeight = '800';
+    }
+    if (btnTeacher) {
+      btnTeacher.style.borderColor = 'var(--border)';
+      btnTeacher.style.background = '#FFFFFF';
+      btnTeacher.style.color = 'var(--text-secondary)';
+      btnTeacher.style.fontWeight = '700';
+    }
+    if (title) title.textContent = 'Tài Khoản Học Viên';
+    if (subtitle) subtitle.textContent = 'Lưu trữ và theo dõi tiến độ học tiếng Trung riêng biệt';
+    if (logo) logo.textContent = '🀄';
+    if (hint) hint.classList.add('hidden');
+    if (regTab) regTab.style.display = '';
+    if (loginUser && loginUser.value === 'admin') loginUser.value = '';
+  }
+}
+
+function openAuthModal(tab = 'login', role = 'student') {
   const modal = document.getElementById('auth-modal');
   if (!modal) return;
   modal.classList.add('open');
+  selectAuthRole(role);
   switchAuthTab(tab);
 }
 
@@ -1587,7 +1669,13 @@ function switchAuthTab(tab) {
   document.getElementById('form-login')?.classList.toggle('hidden', tab !== 'login');
   document.getElementById('form-register')?.classList.toggle('hidden', tab !== 'register');
   const title = document.getElementById('auth-modal-title');
-  if (title) title.textContent = tab === 'login' ? 'Đăng Nhập Học Viên' : 'Đăng Ký Học Viên Mới';
+  if (title) {
+    if (currentAuthRole === 'teacher') {
+      title.textContent = 'Cổng Đăng Nhập Giáo Viên';
+    } else {
+      title.textContent = tab === 'login' ? 'Đăng Nhập Học Viên' : 'Đăng Ký Học Viên Mới';
+    }
+  }
 }
 
 function handleLoginSubmit(e) {
@@ -1596,7 +1684,12 @@ function handleLoginSubmit(e) {
   const p = document.getElementById('login-password').value;
   if (Auth.login(u, p)) {
     closeAuthModal();
-    setPage('profile');
+    const curr = Auth.getCurrentUser();
+    if (curr && curr.role === 'admin') {
+      setPage('admin');
+    } else {
+      setPage('dashboard');
+    }
   }
 }
 
@@ -1609,6 +1702,14 @@ function handleRegisterSubmit(e) {
     closeAuthModal();
     setPage('profile');
   }
+}
+
+function switchAdminSubPage(tab) {
+  setPage('admin');
+  switchAdminTab(tab);
+  document.querySelectorAll('#sidebar-nav-teacher .nav-item').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`tnav-${tab}`)?.classList.add('active');
+  document.getElementById('sidebar')?.classList.remove('open');
 }
 
 function openBackupModal() {
@@ -1696,6 +1797,7 @@ function switchAdminTab(tab) {
   ['students', 'assignments', 'announcements'].forEach(t => {
     document.getElementById(`tab-btn-admin-${t}`)?.classList.toggle('active', t === tab);
     document.getElementById(`admin-tab-${t}`)?.classList.toggle('hidden', t !== tab);
+    document.getElementById(`tnav-${t}`)?.classList.toggle('active', t === tab);
   });
   if (tab === 'students') renderAdminStudents();
   if (tab === 'assignments') renderAdminAssignments();
@@ -2499,6 +2601,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Default page
-  setPage('dashboard');
+  const currUser = Auth.getCurrentUser();
+  if (currUser && currUser.role === 'admin') {
+    setPage('admin');
+  } else {
+    setPage('dashboard');
+  }
   updateLevelDisplay();
 });

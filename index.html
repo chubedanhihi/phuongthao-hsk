@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5.1" />
+  <link rel="stylesheet" href="style.css?v=5.2" />
 </head>
 <body>
 
@@ -17,13 +17,15 @@
   <!-- ───── SIDEBAR ───── -->
   <nav id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-icon">🀄</div>
+      <div class="logo-icon" id="sidebar-logo-icon">🀄</div>
       <div>
-        <div class="logo-text">HSK Learn</div>
-        <div class="logo-sub">Học tiếng Trung</div>
+        <div class="logo-text" id="sidebar-logo-text">HSK Learn</div>
+        <div class="logo-sub" id="sidebar-logo-sub">Học tiếng Trung</div>
       </div>
     </div>
-    <div class="sidebar-nav">
+
+    <!-- 1. SIDEBAR DÀNH CHO HỌC VIÊN -->
+    <div class="sidebar-nav" id="sidebar-nav-student">
       <button class="nav-item" data-page="dashboard">
         <span class="nav-icon">🏠</span> Tổng quan
       </button>
@@ -45,8 +47,31 @@
       <button class="nav-item" data-page="profile">
         <span class="nav-icon">👤</span> Hồ sơ học viên
       </button>
-      <button class="nav-item hidden" id="nav-item-admin" data-page="admin" style="background:#FFF1F2;border:1px dashed #FDA4AF;color:var(--brand);font-weight:700">
-        <span class="nav-icon">🛡️</span> Quản trị lớp học
+    </div>
+
+    <!-- 2. SIDEBAR DÀNH RIÊNG CHO GIÁO VIÊN QUẢN TRỊ (HOÀN TOÀN TÁCH BIỆT) -->
+    <div class="sidebar-nav hidden" id="sidebar-nav-teacher">
+      <button class="nav-item active" id="tnav-students" onclick="switchAdminSubPage('students')">
+        <span class="nav-icon">👥</span> Quản lý học viên
+      </button>
+      <button class="nav-item" id="tnav-assignments" onclick="switchAdminSubPage('assignments')">
+        <span class="nav-icon">📝</span> Giao & Quản lý bài tập
+      </button>
+      <button class="nav-item" id="tnav-announcements" onclick="switchAdminSubPage('announcements')">
+        <span class="nav-icon">📢</span> Thông báo lớp học
+      </button>
+      <button class="nav-item" onclick="openClassExportModal()" style="color:#0284C7;font-weight:700">
+        <span class="nav-icon">📤</span> Xuất gói Zalo lớp
+      </button>
+      <button class="nav-item" onclick="openCreateAssignmentModal()" style="color:#059669;font-weight:700">
+        <span class="nav-icon">➕</span> Giao bài tập mới
+      </button>
+      <button class="nav-item" onclick="openCreateAnnouncementModal()" style="color:#7C3AED;font-weight:700">
+        <span class="nav-icon">📢</span> Đăng thông báo mới
+      </button>
+      <div style="margin:12px 14px;border-top:1px dashed var(--border)"></div>
+      <button class="nav-item" onclick="Auth.logout()" style="color:var(--brand);font-weight:700;background:#FFF1F2">
+        <span class="nav-icon">🚪</span> Đăng xuất quản trị
       </button>
     </div>
 
@@ -698,13 +723,28 @@
 <div class="modal-overlay" id="auth-modal">
   <div class="modal-box auth-modal-box">
     <div class="auth-header">
-      <div class="auth-logo">🀄</div>
+      <div class="auth-logo" id="auth-modal-logo">🀄</div>
       <h3 class="auth-title" id="auth-modal-title">Tài Khoản Học Viên</h3>
-      <p class="auth-subtitle">Lưu trữ và theo dõi tiến độ học tiếng Trung riêng biệt</p>
+      <p class="auth-subtitle" id="auth-modal-subtitle">Lưu trữ và theo dõi tiến độ học tiếng Trung riêng biệt</p>
     </div>
 
-    <!-- Tab switcher -->
-    <div class="auth-tabs">
+    <!-- Chọn vai trò đăng nhập: Học viên vs Giáo viên -->
+    <div style="display:flex;gap:10px;margin-bottom:18px" id="auth-role-buttons">
+      <button type="button" class="action-btn" id="role-btn-student" onclick="selectAuthRole('student')" style="flex:1;padding:10px 8px;border:2px solid var(--brand);border-radius:12px;background:#FFF1F2;color:var(--brand);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px">
+        🎓 Học Viên
+      </button>
+      <button type="button" class="action-btn" id="role-btn-teacher" onclick="selectAuthRole('teacher')" style="flex:1;padding:10px 8px;border:2px solid var(--border);border-radius:12px;background:#FFFFFF;color:var(--text-secondary);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px">
+        👩‍🏫 Giáo Viên
+      </button>
+    </div>
+
+    <div id="teacher-login-hint" class="hidden" style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <span>💡</span>
+      <span>Tài khoản giáo viên quản trị: <b>admin</b> | Mật khẩu: <b>admin123</b></span>
+    </div>
+
+    <!-- Tab switcher (Đăng nhập / Đăng ký) -->
+    <div class="auth-tabs" id="auth-action-tabs">
       <button class="auth-tab-btn active" id="tab-auth-login" onclick="switchAuthTab('login')">Đăng nhập</button>
       <button class="auth-tab-btn" id="tab-auth-register" onclick="switchAuthTab('register')">Đăng ký mới</button>
     </div>
@@ -1029,9 +1069,9 @@
 </script>
 
 <!-- Scripts — data TRƯỚC, app SAU -->
-<script src="data/hsk_data.js?v=5.1"></script>
-<script src="data/radicals_data.js?v=5.1"></script>
-<script src="data/strokes_cache.js?v=5.1"></script>
-<script src="app.js?v=5.1"></script>
+<script src="data/hsk_data.js?v=5.2"></script>
+<script src="data/radicals_data.js?v=5.2"></script>
+<script src="data/strokes_cache.js?v=5.2"></script>
+<script src="app.js?v=5.2"></script>
 </body>
 </html>
