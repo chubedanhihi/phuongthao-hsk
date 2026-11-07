@@ -37,7 +37,22 @@ const State = {
 const Auth = {
   getUsers() {
     try {
-      return JSON.parse(localStorage.getItem('hsk_users_list')) || [];
+      let users = JSON.parse(localStorage.getItem('hsk_users_list')) || [];
+      if (!users.some(u => u.username && u.username.toLowerCase() === 'admin')) {
+        const adminUser = {
+          id: 'u_admin',
+          name: 'Giáo viên Quản trị',
+          username: 'admin',
+          password: 'admin123',
+          role: 'admin',
+          avatar: '👑',
+          createdAt: '01/01/2025',
+          lastLogin: new Date().toISOString()
+        };
+        users.unshift(adminUser);
+        localStorage.setItem('hsk_users_list', JSON.stringify(users));
+      }
+      return users;
     } catch {
       return [];
     }
@@ -79,6 +94,7 @@ const Auth = {
       name: cleanName,
       username: cleanUser,
       password: password,
+      role: 'student',
       avatar: avatar || '🐼',
       createdAt: new Date().toLocaleDateString('vi-VN'),
       lastLogin: new Date().toISOString()
@@ -252,6 +268,176 @@ const Storage = {
 };
 
 /* ═══════════════════════════════════════════
+   CLASSROOM & ASSIGNMENT MANAGEMENT
+   ═══════════════════════════════════════════ */
+const ClassManager = {
+  getAssignments() {
+    try {
+      return JSON.parse(localStorage.getItem('hsk_class_assignments')) || [];
+    } catch {
+      return [];
+    }
+  },
+  saveAssignments(list) {
+    localStorage.setItem('hsk_class_assignments', JSON.stringify(list));
+  },
+  addAssignment(item) {
+    const list = this.getAssignments();
+    list.unshift(item);
+    this.saveAssignments(list);
+  },
+  deleteAssignment(id) {
+    let list = this.getAssignments();
+    list = list.filter(a => a.id !== id);
+    this.saveAssignments(list);
+  },
+  getAnnouncements() {
+    try {
+      return JSON.parse(localStorage.getItem('hsk_class_announcements')) || [];
+    } catch {
+      return [];
+    }
+  },
+  saveAnnouncements(list) {
+    localStorage.setItem('hsk_class_announcements', JSON.stringify(list));
+  },
+  addAnnouncement(item) {
+    const list = this.getAnnouncements();
+    list.unshift(item);
+    this.saveAnnouncements(list);
+  },
+  deleteAnnouncement(id) {
+    let list = this.getAnnouncements();
+    list = list.filter(a => a.id !== id);
+    this.saveAnnouncements(list);
+  },
+  checkStudentAssignment(studentId, assignment) {
+    const prefix = studentId ? `hsk_user_${studentId}_` : 'hsk_';
+    let userProgress = {};
+    let userQuizStats = { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 };
+    try { userProgress = JSON.parse(localStorage.getItem(prefix + 'progress')) || {}; } catch {}
+    try { userQuizStats = JSON.parse(localStorage.getItem(prefix + 'quiz_stats')) || { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 }; } catch {}
+
+    const targetVal = parseInt(assignment.target) || 1;
+    let currentVal = 0;
+
+    if (assignment.type === 'learn_words') {
+      const words = assignment.level === 'all' ? ALL_WORDS : ALL_WORDS.filter(w => w.level === parseInt(assignment.level));
+      currentVal = words.filter(w => userProgress[`${w.level}-${w.id}`] === 'know').length;
+    } else if (assignment.type === 'quiz_score') {
+      currentVal = userQuizStats.totalQuizzes;
+    } else if (assignment.type === 'srs_review') {
+      let srsQueue = [];
+      try { srsQueue = JSON.parse(localStorage.getItem(prefix + 'srs')) || []; } catch {}
+      currentVal = srsQueue.length;
+    } else if (assignment.type === 'stroke_practice') {
+      currentVal = Object.values(userProgress).filter(v => v === 'know').length;
+    }
+
+    const pct = Math.min(100, Math.round((currentVal / targetVal) * 100));
+    const isCompleted = currentVal >= targetVal;
+    return { currentVal, targetVal, pct, isCompleted };
+  },
+  getReadNotifs(userId) {
+    const key = userId ? `hsk_user_${userId}_read_notifs` : 'hsk_read_notifs';
+    try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+  },
+  markNotifRead(userId, notifId) {
+    const key = userId ? `hsk_user_${userId}_read_notifs` : 'hsk_read_notifs';
+    const list = this.getReadNotifs(userId);
+    if (!list.includes(notifId)) {
+      list.push(notifId);
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+  },
+  markAllNotifsRead(userId) {
+    const key = userId ? `hsk_user_${userId}_read_notifs` : 'hsk_read_notifs';
+    const all = [...this.getAssignments().map(a => 'asgn_' + a.id), ...this.getAnnouncements().map(a => 'ann_' + a.id)];
+    localStorage.setItem(key, JSON.stringify(all));
+  },
+  exportClassPackage() {
+    return JSON.stringify({
+      version: 'HSK_CLASS_1.0',
+      exportedAt: new Date().toISOString(),
+      teacher: 'Cô Phương Thảo',
+      assignments: this.getAssignments(),
+      announcements: this.getAnnouncements()
+    }, null, 2);
+  },
+  importClassPackage(jsonString) {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data || (!data.assignments && !data.announcements)) {
+        throw new Error('Định dạng không hợp lệ');
+      }
+      if (Array.isArray(data.assignments)) {
+        const curr = this.getAssignments();
+        const map = new Map(curr.map(a => [a.id, a]));
+        data.assignments.forEach(a => map.set(a.id, a));
+        this.saveAssignments(Array.from(map.values()));
+      }
+      if (Array.isArray(data.announcements)) {
+        const curr = this.getAnnouncements();
+        const map = new Map(curr.map(a => [a.id, a]));
+        data.announcements.forEach(a => map.set(a.id, a));
+        this.saveAnnouncements(Array.from(map.values()));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  seedInitialDataIfEmpty() {
+    if (!localStorage.getItem('hsk_class_assignments')) {
+      const initialAssignments = [
+        {
+          id: 'asgn_1',
+          title: 'Học thuộc 20 từ vựng cơ bản HSK 1',
+          type: 'learn_words',
+          level: '1',
+          target: 20,
+          deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+          desc: 'Các em xem thẻ flashcard HSK 1 và ghi nhớ nghĩa tiếng Việt cùng pinyin nhé!',
+          createdAt: new Date().toISOString().slice(0, 10)
+        },
+        {
+          id: 'asgn_2',
+          title: 'Hoàn thành 3 bài kiểm tra trắc nghiệm Quiz',
+          type: 'quiz_score',
+          level: 'all',
+          target: 3,
+          deadline: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+          desc: 'Làm trắc nghiệm để củng cố phản xạ nhận diện chữ Hán và phát âm.',
+          createdAt: new Date().toISOString().slice(0, 10)
+        }
+      ];
+      this.saveAssignments(initialAssignments);
+    }
+    if (!localStorage.getItem('hsk_class_announcements')) {
+      const initialAnnouncements = [
+        {
+          id: 'ann_1',
+          title: 'Chào mừng các bạn học viên đến với khóa học Tiếng Trung HSK!',
+          tag: '🎉 Sự kiện',
+          content: 'Chào mừng các em! Lớp học HSK của cô Phương Thảo đã mở trên web. Các em hãy học đều đặn mỗi ngày từ 15-20 phút và hoàn thành bài tập giao nhé!',
+          pinned: true,
+          createdAt: new Date().toISOString().slice(0, 10)
+        },
+        {
+          id: 'ann_2',
+          title: 'Nhắc nhở ôn tập SRS đều đặn hàng ngày',
+          tag: '🔔 Nhắc nhở',
+          content: 'Mỗi ngày hãy bấm vào mục "Ôn tập SRS" để ôn lại các từ sắp quên theo thuật toán khoa học. Chúc các em học tốt!',
+          pinned: false,
+          createdAt: new Date().toISOString().slice(0, 10)
+        }
+      ];
+      this.saveAnnouncements(initialAnnouncements);
+    }
+  }
+};
+
+/* ═══════════════════════════════════════════
    HELPERS
    ═══════════════════════════════════════════ */
 function getWords(level = 'all') {
@@ -323,6 +509,7 @@ function setPage(page, keepCustomWords = false) {
     strokes:   '✍️ Luyện viết chữ & Bộ thủ',
     srs:       '🔁 Ôn tập SRS',
     profile:   '👤 Hồ sơ học viên',
+    admin:     '🛡️ Quản trị lớp học',
   }[page] || '🏠 Tổng quan';
   // init each section
   if (page === 'dashboard')  renderDashboard();
@@ -335,6 +522,15 @@ function setPage(page, keepCustomWords = false) {
   if (page === 'strokes')    initStrokes();
   if (page === 'srs')        renderSRS();
   if (page === 'profile')    renderProfile();
+  if (page === 'admin') {
+    const user = Auth.getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      showToast('⚠️ Chỉ tài khoản Giáo viên Quản trị mới được truy cập!');
+      setPage('dashboard');
+      return;
+    }
+    renderAdmin();
+  }
   // close sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -351,6 +547,9 @@ function renderDashboard() {
   document.getElementById('dash-learned').textContent = learned;
   document.getElementById('dash-due').textContent     = due;
   document.getElementById('dash-streak').textContent  = getStreak();
+
+  renderDashboardAssignments();
+  updateNotifBadge();
 
   const levelsEl = document.getElementById('dash-levels');
   levelsEl.innerHTML = '';
@@ -1213,10 +1412,19 @@ function updateAuthDisplay() {
   const topAvatar = document.getElementById('topbar-avatar');
   const topName = document.getElementById('topbar-name');
 
+  const adminNav = document.getElementById('nav-item-admin');
+  if (adminNav) {
+    if (user && user.role === 'admin') {
+      adminNav.classList.remove('hidden');
+    } else {
+      adminNav.classList.add('hidden');
+    }
+  }
+
   if (user) {
     if (sideAvatar) sideAvatar.textContent = user.avatar || '🐼';
     if (sideName) sideName.textContent = user.name;
-    if (sideSub) sideSub.textContent = `Học viên • @${user.username}`;
+    if (sideSub) sideSub.textContent = user.role === 'admin' ? `Giáo viên Quản trị • @${user.username}` : `Học viên • @${user.username}`;
     if (topAvatar) topAvatar.textContent = user.avatar || '🐼';
     if (topName) topName.textContent = user.name;
   } else {
@@ -1226,6 +1434,8 @@ function updateAuthDisplay() {
     if (topAvatar) topAvatar.textContent = '👤';
     if (topName) topName.textContent = 'Đăng nhập';
   }
+
+  updateNotifBadge();
 }
 
 function renderProfile() {
@@ -1462,10 +1672,579 @@ function applyBackupImport() {
 }
 
 /* ═══════════════════════════════════════════
+   ADMIN PORTAL & CLASS NOTIFICATIONS
+   ═══════════════════════════════════════════ */
+function switchAdminTab(tab) {
+  ['students', 'assignments', 'announcements'].forEach(t => {
+    document.getElementById(`tab-btn-admin-${t}`)?.classList.toggle('active', t === tab);
+    document.getElementById(`admin-tab-${t}`)?.classList.toggle('hidden', t !== tab);
+  });
+  if (tab === 'students') renderAdminStudents();
+  if (tab === 'assignments') renderAdminAssignments();
+  if (tab === 'announcements') renderAdminAnnouncements();
+}
+
+function renderAdmin() {
+  const users = Auth.getUsers().filter(u => u.role !== 'admin');
+  const assignments = ClassManager.getAssignments();
+  const announcements = ClassManager.getAnnouncements();
+
+  const totalStudentsEl = document.getElementById('admin-total-students');
+  const totalAsgnEl = document.getElementById('admin-total-assignments');
+  const totalAnnEl = document.getElementById('admin-total-announcements');
+  const avgWordsEl = document.getElementById('admin-avg-words');
+
+  if (totalStudentsEl) totalStudentsEl.textContent = users.length;
+  if (totalAsgnEl) totalAsgnEl.textContent = assignments.length;
+  if (totalAnnEl) totalAnnEl.textContent = announcements.length;
+
+  let totalWordsLearnedAcrossAll = 0;
+  users.forEach(u => {
+    try {
+      const prog = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_progress`)) || {};
+      totalWordsLearnedAcrossAll += Object.values(prog).filter(v => v === 'know').length;
+    } catch {}
+  });
+  const avg = users.length ? Math.round(totalWordsLearnedAcrossAll / users.length) : 0;
+  if (avgWordsEl) avgWordsEl.textContent = avg;
+
+  renderAdminStudents();
+  renderAdminAssignments();
+  renderAdminAnnouncements();
+}
+
+function renderAdminStudents() {
+  const tbody = document.getElementById('admin-students-tbody');
+  const countEl = document.getElementById('admin-student-count');
+  const searchInput = document.getElementById('admin-search-student');
+  const q = (searchInput?.value || '').trim().toLowerCase();
+
+  const users = Auth.getUsers().filter(u => u.role !== 'admin');
+  const filtered = users.filter(u => {
+    if (!q) return true;
+    return (u.name && u.name.toLowerCase().includes(q)) ||
+           (u.username && u.username.toLowerCase().includes(q));
+  });
+
+  if (countEl) countEl.textContent = `${filtered.length} học viên`;
+
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Không có học viên nào phù hợp.</td></tr>`;
+    return;
+  }
+
+  const totalWords = ALL_WORDS.length;
+  tbody.innerHTML = filtered.map(u => {
+    let prog = {};
+    let streak = 0;
+    let quizStats = { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 };
+    try { prog = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_progress`)) || {}; } catch {}
+    try {
+      const sData = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_streak`) || '{}');
+      streak = sData.streak || 0;
+    } catch {}
+    try { quizStats = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_quiz_stats`)) || quizStats; } catch {}
+
+    const learned = Object.values(prog).filter(v => v === 'know').length;
+    const pct = totalWords ? Math.round((learned / totalWords) * 100) : 0;
+
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">${u.avatar || '🐼'}</span>
+            <span style="font-weight:800;color:#0F172A">${u.name}</span>
+          </div>
+        </td>
+        <td><span class="badge" style="background:var(--surface2);color:var(--text)">@${u.username}</span></td>
+        <td>${u.createdAt || 'Mới tham gia'}</td>
+        <td><b style="color:var(--brand)">${learned}</b> / ${totalWords}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:60px;height:6px;background:#E2E8F0;border-radius:99px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:99px"></div>
+            </div>
+            <span style="font-weight:700;font-size:12px">${pct}%</span>
+          </div>
+        </td>
+        <td><b>${quizStats.totalQuizzes}</b> bài</td>
+        <td>🔥 <b>${streak}</b> ngày</td>
+        <td>
+          <button class="tts-btn" onclick="viewStudentDetail('${u.id}')" style="padding:6px 12px;font-size:12px;font-weight:700">🔍 Chi tiết</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function viewStudentDetail(userId) {
+  const users = Auth.getUsers();
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+
+  let prog = {};
+  let streak = 0;
+  let quizStats = { totalQuizzes: 0, totalQuestions: 0, totalScore: 0 };
+  try { prog = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_progress`)) || {}; } catch {}
+  try {
+    const sData = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_streak`) || '{}');
+    streak = sData.streak || 0;
+  } catch {}
+  try { quizStats = JSON.parse(localStorage.getItem(`hsk_user_${u.id}_quiz_stats`)) || quizStats; } catch {}
+
+  const learned = Object.values(prog).filter(v => v === 'know').length;
+  const totalWords = ALL_WORDS.length;
+  const pct = totalWords ? Math.round((learned / totalWords) * 100) : 0;
+
+  const admAvatar = document.getElementById('adm-modal-avatar');
+  const admName = document.getElementById('adm-modal-name');
+  const admUser = document.getElementById('adm-modal-username');
+  const admLearned = document.getElementById('adm-modal-learned');
+  const admPct = document.getElementById('adm-modal-pct');
+  const admStreak = document.getElementById('adm-modal-streak');
+
+  if (admAvatar) admAvatar.textContent = u.avatar || '🐼';
+  if (admName) admName.textContent = u.name;
+  if (admUser) admUser.textContent = `@${u.username} • Tham gia: ${u.createdAt || 'Gần đây'} • Đã làm ${quizStats.totalQuizzes} bài kiểm tra`;
+  if (admLearned) admLearned.textContent = `${learned}/${totalWords}`;
+  if (admPct) admPct.textContent = `${pct}%`;
+  if (admStreak) admStreak.textContent = `${streak} ngày 🔥`;
+
+  const levelsListEl = document.getElementById('adm-modal-levels-list');
+  if (levelsListEl) {
+    levelsListEl.innerHTML = '';
+    for (let lv = 1; lv <= 9; lv++) {
+      const words = getWords(lv);
+      const cnt = words.length;
+      const done = words.filter(w => prog[`${w.level}-${w.id}`] === 'know').length;
+      const lvPct = cnt ? Math.round((done / cnt) * 100) : 0;
+      const bg = levelColor(lv);
+      levelsListEl.innerHTML += `
+        <div class="profile-level-row" style="padding:10px 14px">
+          <div class="profile-lv-tag" style="background:${bg}">HSK ${lv}</div>
+          <div class="profile-lv-info">
+            <div class="profile-lv-text">
+              <span>Đã thuộc: <b>${done}/${cnt}</b> từ</span>
+              <span style="color:${bg}">${lvPct}%</span>
+            </div>
+            <div class="profile-lv-bar-wrap">
+              <div class="profile-lv-bar-fill" style="width:${lvPct}%;background:${bg}"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById('admin-student-modal')?.classList.add('open');
+}
+
+function closeAdminStudentModal() {
+  document.getElementById('admin-student-modal')?.classList.remove('open');
+}
+
+function renderAdminAssignments() {
+  const container = document.getElementById('admin-assignments-list');
+  if (!container) return;
+  const list = ClassManager.getAssignments();
+  if (!list.length) {
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--text-muted);background:var(--surface2);border-radius:var(--radius-sm)">Chưa có bài tập nào được giao. Hãy bấm "Giao Bài Mới" để tạo bài tập cho học viên!</div>`;
+    return;
+  }
+  const typeMap = {
+    learn_words: '📖 Học từ vựng',
+    quiz_score: '🎯 Điểm thi Quiz',
+    srs_review: '🔁 Ôn tập SRS',
+    stroke_practice: '✍️ Luyện viết chữ'
+  };
+
+  container.innerHTML = list.map(a => {
+    return `
+      <div class="assignment-card">
+        <div>
+          <div class="assignment-header">
+            <span class="badge" style="background:#FFF1F2;color:var(--brand)">${typeMap[a.type] || a.type}</span>
+            <span class="badge" style="background:var(--surface2);color:var(--text-muted)">HSK: ${a.level === 'all' ? 'Tất cả' : a.level}</span>
+          </div>
+          <div class="assignment-title">${a.title}</div>
+          <div class="assignment-meta" style="margin-top:8px">
+            <div>🎯 <b>Mục tiêu:</b> ${a.target} ${a.type === 'learn_words' ? 'từ thuộc' : (a.type === 'quiz_score' ? 'bài kiểm tra' : 'lượt')}</div>
+            <div>⏰ <b>Hạn nộp:</b> ${a.deadline || 'Không giới hạn'}</div>
+            ${a.desc ? `<div style="margin-top:6px;font-style:italic;color:var(--text-secondary)">"${a.desc}"</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+          <button class="action-btn" onclick="deleteAssignment('${a.id}')" style="background:#FFF1F2;color:var(--brand);border:1px solid #FECDD3;padding:6px 12px;font-size:12px">🗑️ Xóa bài này</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteAssignment(id) {
+  if (confirm('Bạn có chắc muốn xóa bài tập này?')) {
+    ClassManager.deleteAssignment(id);
+    renderAdminAssignments();
+    renderDashboardAssignments();
+    updateNotifBadge();
+    showToast('🗑️ Đã xóa bài tập!');
+  }
+}
+
+function renderAdminAnnouncements() {
+  const container = document.getElementById('admin-announcements-list');
+  if (!container) return;
+  const list = ClassManager.getAnnouncements();
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;padding:28px;color:var(--text-muted);background:var(--surface2);border-radius:var(--radius-sm)">Chưa có thông báo nào được đăng. Hãy bấm "Đăng Thông Báo Mới"!</div>`;
+    return;
+  }
+
+  const sorted = [...list].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+  container.innerHTML = sorted.map(ann => {
+    return `
+      <div class="announcement-card ${ann.pinned ? 'pinned' : ''}">
+        <div class="announcement-header">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${ann.pinned ? '<span class="badge" style="background:#FFF1F2;color:var(--brand);font-weight:800">📌 Đã ghim</span>' : ''}
+            <span class="badge" style="background:var(--surface2);color:var(--text)">${ann.tag || '📢 Thông báo'}</span>
+            <span style="font-size:12px;color:var(--text-muted)">${ann.createdAt || ''}</span>
+          </div>
+          <button class="action-btn" onclick="deleteAnnouncement('${ann.id}')" style="background:#FFF1F2;color:var(--brand);border:1px solid #FECDD3;padding:4px 8px;font-size:11px">🗑️ Xóa</button>
+        </div>
+        <div class="announcement-title" style="margin-bottom:6px">${ann.title}</div>
+        <div class="announcement-body">${ann.content}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteAnnouncement(id) {
+  if (confirm('Bạn có chắc muốn xóa thông báo này?')) {
+    ClassManager.deleteAnnouncement(id);
+    renderAdminAnnouncements();
+    updateNotifBadge();
+    showToast('🗑️ Đã xóa thông báo!');
+  }
+}
+
+function openCreateAssignmentModal() {
+  const modal = document.getElementById('create-assignment-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  const d = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const dlInput = document.getElementById('asgn-deadline');
+  if (dlInput && !dlInput.value) dlInput.value = d;
+}
+
+function closeCreateAssignmentModal() {
+  document.getElementById('create-assignment-modal')?.classList.remove('open');
+}
+
+function updateAssignmentTargetLabel() {
+  const type = document.getElementById('asgn-type')?.value;
+  const label = document.getElementById('asgn-target-label');
+  if (!label) return;
+  if (type === 'learn_words') label.textContent = 'Mục tiêu (Số từ cần thuộc)';
+  else if (type === 'quiz_score') label.textContent = 'Mục tiêu (Số bài kiểm tra đã làm)';
+  else if (type === 'srs_review') label.textContent = 'Mục tiêu (Số từ ôn tập SRS)';
+  else if (type === 'stroke_practice') label.textContent = 'Mục tiêu (Số chữ luyện viết)';
+}
+
+function handleCreateAssignmentSubmit(e) {
+  e.preventDefault();
+  const title = document.getElementById('asgn-title').value.trim();
+  const type = document.getElementById('asgn-type').value;
+  const level = document.getElementById('asgn-level').value;
+  const target = parseInt(document.getElementById('asgn-target').value) || 1;
+  const deadline = document.getElementById('asgn-deadline').value;
+  const desc = document.getElementById('asgn-desc').value.trim();
+
+  const newAsgn = {
+    id: 'asgn_' + Date.now(),
+    title,
+    type,
+    level,
+    target,
+    deadline,
+    desc,
+    createdAt: new Date().toISOString().slice(0, 10)
+  };
+
+  ClassManager.addAssignment(newAsgn);
+  closeCreateAssignmentModal();
+  document.getElementById('form-create-assignment')?.reset();
+  renderAdminAssignments();
+  renderDashboardAssignments();
+  updateNotifBadge();
+  showToast('🎉 Đã giao bài tập mới thành công!');
+}
+
+function openCreateAnnouncementModal() {
+  document.getElementById('create-announcement-modal')?.classList.add('open');
+}
+
+function closeCreateAnnouncementModal() {
+  document.getElementById('create-announcement-modal')?.classList.remove('open');
+}
+
+function handleCreateAnnouncementSubmit(e) {
+  e.preventDefault();
+  const title = document.getElementById('ann-title').value.trim();
+  const tag = document.getElementById('ann-tag').value;
+  const content = document.getElementById('ann-content').value.trim();
+  const pinned = document.getElementById('ann-pinned')?.checked || false;
+
+  const newAnn = {
+    id: 'ann_' + Date.now(),
+    title,
+    tag,
+    content,
+    pinned,
+    createdAt: new Date().toISOString().slice(0, 10)
+  };
+
+  ClassManager.addAnnouncement(newAnn);
+  closeCreateAnnouncementModal();
+  document.getElementById('form-create-announcement')?.reset();
+  renderAdminAnnouncements();
+  updateNotifBadge();
+  showToast('📢 Đã đăng thông báo mới!');
+}
+
+function openClassExportModal() {
+  const modal = document.getElementById('class-sync-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  switchClassSyncTab('export');
+}
+
+function openStudentSyncModal() {
+  const modal = document.getElementById('class-sync-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  switchClassSyncTab('import');
+}
+
+function closeClassSyncModal() {
+  document.getElementById('class-sync-modal')?.classList.remove('open');
+}
+
+function switchClassSyncTab(tab) {
+  document.getElementById('tab-class-export')?.classList.toggle('active', tab === 'export');
+  document.getElementById('tab-class-import')?.classList.toggle('active', tab === 'import');
+  document.getElementById('panel-class-export')?.classList.toggle('hidden', tab !== 'export');
+  document.getElementById('panel-class-import')?.classList.toggle('hidden', tab !== 'import');
+  if (tab === 'export') {
+    const box = document.getElementById('class-export-box');
+    if (box) box.value = ClassManager.exportClassPackage();
+  }
+}
+
+function copyClassExportCode() {
+  const box = document.getElementById('class-export-box');
+  if (!box) return;
+  box.select();
+  navigator.clipboard.writeText(box.value).then(() => {
+    showToast('📋 Đã sao chép mã gói lớp học!');
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('📋 Đã sao chép mã gói lớp học!');
+  });
+}
+
+function downloadClassExportFile() {
+  const jsonStr = ClassManager.exportClassPackage();
+  const filename = `hsk_class_package_${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('💾 Đã tải file gói bài tập lớp về máy!');
+}
+
+function handleClassFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const box = document.getElementById('class-import-box');
+    if (box) box.value = evt.target.result;
+    showToast('📄 Đã nạp file bài tập từ cô giáo!');
+  };
+  reader.readAsText(file);
+}
+
+function applyClassImport() {
+  const code = document.getElementById('class-import-box')?.value.trim();
+  if (!code) {
+    showToast('⚠️ Vui lòng dán mã hoặc chọn file bài tập từ cô!');
+    return;
+  }
+  if (ClassManager.importClassPackage(code)) {
+    closeClassSyncModal();
+    renderDashboardAssignments();
+    updateNotifBadge();
+    showToast('🎉 Nhận bài tập & thông báo từ cô thành công!');
+  } else {
+    showToast('❌ Mã bài tập không đúng định dạng!');
+  }
+}
+
+function updateNotifBadge() {
+  const user = Auth.getCurrentUser();
+  const uId = user ? user.id : null;
+  const readList = ClassManager.getReadNotifs(uId);
+
+  const assignments = ClassManager.getAssignments();
+  const announcements = ClassManager.getAnnouncements();
+
+  let unread = 0;
+  assignments.forEach(a => {
+    if (!readList.includes('asgn_' + a.id)) unread++;
+  });
+  announcements.forEach(ann => {
+    if (!readList.includes('ann_' + ann.id)) unread++;
+  });
+
+  const badge = document.getElementById('notif-badge');
+  if (badge) {
+    badge.textContent = unread;
+    badge.classList.toggle('hidden', unread === 0);
+  }
+  const unreadText = document.getElementById('notif-unread-text');
+  if (unreadText) {
+    unreadText.textContent = `${unread} thông báo / bài tập mới`;
+  }
+}
+
+function openNotifModal() {
+  const modal = document.getElementById('notif-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+
+  const container = document.getElementById('notif-list-container');
+  if (!container) return;
+
+  const user = Auth.getCurrentUser();
+  const uId = user ? user.id : null;
+  const readList = ClassManager.getReadNotifs(uId);
+
+  const assignments = ClassManager.getAssignments();
+  const announcements = ClassManager.getAnnouncements();
+
+  let items = [];
+  announcements.forEach(ann => {
+    items.push({
+      id: 'ann_' + ann.id,
+      type: 'announcement',
+      title: `${ann.pinned ? '📌 ' : ''}${ann.title}`,
+      tag: ann.tag || '📢 Thông báo',
+      desc: ann.content,
+      time: ann.createdAt || 'Mới đây',
+      isUnread: !readList.includes('ann_' + ann.id)
+    });
+  });
+  assignments.forEach(asgn => {
+    const status = ClassManager.checkStudentAssignment(uId, asgn);
+    items.push({
+      id: 'asgn_' + asgn.id,
+      type: 'assignment',
+      title: `📝 Bài tập: ${asgn.title}`,
+      tag: status.isCompleted ? '✅ Đã hoàn thành' : `🎯 Tiến độ: ${status.currentVal}/${status.targetVal}`,
+      desc: asgn.desc || `Mục tiêu: Đạt ${asgn.target} • Hạn nộp: ${asgn.deadline || 'Không giới hạn'}`,
+      time: `Hạn: ${asgn.deadline || 'Không giới hạn'}`,
+      isUnread: !readList.includes('asgn_' + asgn.id)
+    });
+  });
+
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted)">Hiện chưa có thông báo hay bài tập nào.</div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    return `
+      <div class="notif-item ${item.isUnread ? 'unread' : ''}" onclick="ClassManager.markNotifRead('${uId}', '${item.id}'); updateNotifBadge(); this.classList.remove('unread');">
+        <div class="notif-item-header">
+          <div class="notif-item-title">${item.title}</div>
+          <span class="badge" style="font-size:10px;background:var(--surface);color:var(--text-muted)">${item.tag}</span>
+        </div>
+        <div class="notif-item-desc">${item.desc}</div>
+        <div class="notif-item-time" style="margin-top:6px">${item.time}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeNotifModal() {
+  document.getElementById('notif-modal')?.classList.remove('open');
+}
+
+function markAllNotifsRead() {
+  const user = Auth.getCurrentUser();
+  const uId = user ? user.id : null;
+  ClassManager.markAllNotifsRead(uId);
+  document.querySelectorAll('.notif-item').forEach(el => el.classList.remove('unread'));
+  updateNotifBadge();
+  showToast('✓ Đã đánh dấu đọc toàn bộ thông báo!');
+}
+
+function renderDashboardAssignments() {
+  const container = document.getElementById('dash-assignments-container');
+  if (!container) return;
+
+  const assignments = ClassManager.getAssignments();
+  const user = Auth.getCurrentUser();
+  const uId = user ? user.id : null;
+
+  if (!assignments.length) {
+    container.innerHTML = `<div style="grid-column:1/-1;font-size:13px;color:var(--text-muted);text-align:center;padding:16px">Hiện chưa có bài tập nào cần làm. Hãy tiếp tục luyện tập tự do nhé!</div>`;
+    return;
+  }
+
+  container.innerHTML = assignments.map(a => {
+    const status = ClassManager.checkStudentAssignment(uId, a);
+    return `
+      <div class="assignment-card ${status.isCompleted ? 'completed' : ''}" style="margin:0">
+        <div class="assignment-header">
+          <span class="badge" style="${status.isCompleted ? 'background:#ECFDF5;color:#059669' : 'background:#FFF1F2;color:var(--brand)'}">
+            ${status.isCompleted ? '✅ Đã hoàn thành' : `⏳ Còn thiếu ${Math.max(0, status.targetVal - status.currentVal)}`}
+          </span>
+          <span style="font-size:11px;color:var(--text-muted)">Hạn: ${a.deadline || 'Không'}</span>
+        </div>
+        <div class="assignment-title" style="font-size:14px;margin-bottom:6px">${a.title}</div>
+        <div class="assignment-meta" style="margin-bottom:8px">
+          <div style="font-size:12px;display:flex;justify-content:space-between">
+            <span>Tiến độ của bạn:</span>
+            <b>${status.currentVal} / ${status.targetVal} (${status.pct}%)</b>
+          </div>
+          <div class="assignment-bar-wrap">
+            <div class="assignment-bar-fill" style="width:${status.pct}%;background:${status.isCompleted ? '#10B981' : 'var(--brand)'}"></div>
+          </div>
+          ${a.desc ? `<div style="font-size:11px;color:var(--text-secondary);font-style:italic;margin-top:4px">"${a.desc}"</div>` : ''}
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="tts-btn" style="padding:4px 10px;font-size:11px;font-weight:700" onclick="setPage('${a.type === 'quiz_score' ? 'quiz' : (a.type === 'srs_review' ? 'srs' : (a.type === 'stroke_practice' ? 'strokes' : 'flashcard'))}')">Làm bài ngay →</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   Storage.load();
+  ClassManager.seedInitialDataIfEmpty();
   updateAuthDisplay();
 
   // Nav clicks
@@ -1684,6 +2463,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('backup-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeBackupModal();
+  });
+  document.getElementById('notif-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeNotifModal();
+  });
+  document.getElementById('create-assignment-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateAssignmentModal();
+  });
+  document.getElementById('create-announcement-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCreateAnnouncementModal();
+  });
+  document.getElementById('admin-student-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAdminStudentModal();
+  });
+  document.getElementById('class-sync-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeClassSyncModal();
   });
 
   // Default page

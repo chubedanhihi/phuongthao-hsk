@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=4.0" />
+  <link rel="stylesheet" href="style.css?v=5.0" />
 </head>
 <body>
 
@@ -45,6 +45,9 @@
       <button class="nav-item" data-page="profile">
         <span class="nav-icon">👤</span> Hồ sơ học viên
       </button>
+      <button class="nav-item hidden" id="nav-item-admin" data-page="admin" style="background:#FFF1F2;border:1px dashed #FDA4AF;color:var(--brand);font-weight:700">
+        <span class="nav-icon">🛡️</span> Quản trị lớp học
+      </button>
     </div>
 
     <!-- Student mini badge in sidebar -->
@@ -69,6 +72,12 @@
         <span class="topbar-title">🏠 Tổng quan</span>
       </div>
       <div class="topbar-right">
+        <!-- Notification Bell for Students -->
+        <button class="notif-bell-btn" id="btn-notif-bell" onclick="openNotifModal()" title="Thông báo lớp học">
+          <span style="font-size:18px">🔔</span>
+          <span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+
         <button class="level-select" id="level-btn">
           📊 Cấp độ: <span id="level-label">Tất cả</span> ▾
         </button>
@@ -104,6 +113,25 @@
             <div class="stat-icon">🔥</div>
             <div class="stat-value" id="dash-streak">0</div>
             <div class="stat-label">Ngày liên tiếp</div>
+          </div>
+        </div><!-- /dashboard-grid -->
+
+        <!-- Widget: Bài tập & Thông báo từ giáo viên -->
+        <div id="dash-class-widget" class="card" style="margin-bottom:28px;background:linear-gradient(135deg,#FFF,#FFF8F8);border-color:#FECDD3">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">📋</span>
+              <div>
+                <h3 style="font-size:16px;font-weight:800;color:#0F172A;margin:0">Nhiệm Vụ Học Tập & Thông Báo Lớp</h3>
+                <p style="font-size:12px;color:var(--text-muted);margin:0">Bài tập giáo viên giao và các thông báo mới nhất</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="tts-btn" style="padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);background:#FFF" onclick="openStudentSyncModal()" title="Nhập mã bài tập từ cô giáo">📥 Nhận bài tập từ cô</button>
+            </div>
+          </div>
+          <div id="dash-assignments-container" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+            <!-- Rendered by JS -->
           </div>
         </div>
 
@@ -533,6 +561,109 @@
         </div>
       </section>
 
+      <!-- ══ PAGE: ADMIN (TRANG QUẢN TRỊ VIÊN) ══ -->
+      <section id="page-admin" class="page-section hidden">
+        <!-- Admin Banner Card -->
+        <div class="card admin-banner-card" style="margin-bottom:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+            <div style="display:flex;align-items:center;gap:16px">
+              <div class="admin-badge-icon">🛡️</div>
+              <div>
+                <h2 style="font-size:24px;font-weight:900;color:#0F172A;margin:0 0 4px">Trung Tâm Quản Trị Lớp Học</h2>
+                <p style="margin:0;color:var(--text-muted);font-size:13px">Quản lý học viên, theo dõi tiến độ HSK, giao bài tập và phát thông báo</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="action-btn" onclick="openClassExportModal()" style="background:#FFFFFF;border:1px solid var(--border);padding:10px 16px;font-size:13px">
+                📤 Xuất Gói Lớp Học (Zalo)
+              </button>
+              <button class="action-btn primary" onclick="openCreateAssignmentModal()" style="padding:10px 16px;font-size:13px">
+                ➕ Giao bài tập mới
+              </button>
+              <button class="action-btn success" onclick="openCreateAnnouncementModal()" style="padding:10px 16px;font-size:13px">
+                📢 Đăng thông báo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Quick Stats Cards for Admin -->
+        <div class="dashboard-grid" style="margin-bottom:24px">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="admin-total-students">0</div>
+            <div class="stat-label">Tổng số học viên</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-value" id="admin-total-assignments">0</div>
+            <div class="stat-label">Bài tập đang giao</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📢</div>
+            <div class="stat-value" id="admin-total-announcements">0</div>
+            <div class="stat-label">Thông báo đang phát</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value" id="admin-avg-words">0</div>
+            <div class="stat-label">Từ thuộc trung bình / bạn</div>
+          </div>
+        </div>
+
+        <!-- Admin Tabs Switcher -->
+        <div class="dict-filters" style="margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:16px">
+          <button class="filter-chip active" id="tab-btn-admin-students" onclick="switchAdminTab('students')">👥 Quản lý học viên & Tiến độ</button>
+          <button class="filter-chip" id="tab-btn-admin-assignments" onclick="switchAdminTab('assignments')">📝 Quản lý bài tập đã giao</button>
+          <button class="filter-chip" id="tab-btn-admin-announcements" onclick="switchAdminTab('announcements')">📢 Quản lý thông báo lớp</button>
+        </div>
+
+        <!-- Tab 1: Danh sách học viên -->
+        <div id="admin-tab-students">
+          <div class="card" style="margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+              <input type="text" class="dict-search" id="admin-search-student" placeholder="Tìm theo tên học viên hoặc username..." style="max-width:320px;padding:12px 14px 12px 42px" oninput="renderAdminStudents()" />
+              <div style="font-size:13px;color:var(--text-muted);font-weight:700" id="admin-student-count">0 học viên</div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="admin-table" id="admin-students-table">
+                <thead>
+                  <tr>
+                    <th>Học viên</th>
+                    <th>Tài khoản</th>
+                    <th>Ngày tham gia</th>
+                    <th>Từ đã thuộc</th>
+                    <th>Tiến độ HSK</th>
+                    <th>Bài kiểm tra</th>
+                    <th>Chuỗi ngày</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-students-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Quản lý bài tập -->
+        <div id="admin-tab-assignments" class="hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+            <h3 style="font-size:18px;font-weight:800;color:#0F172A;margin:0">Danh Sách Bài Tập Đã Giao</h3>
+            <button class="action-btn primary" onclick="openCreateAssignmentModal()" style="padding:10px 18px;font-size:13px">➕ Giao Bài Mới</button>
+          </div>
+          <div class="admin-assignments-grid" id="admin-assignments-list"></div>
+        </div>
+
+        <!-- Tab 3: Quản lý thông báo -->
+        <div id="admin-tab-announcements" class="hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+            <h3 style="font-size:18px;font-weight:800;color:#0F172A;margin:0">Danh Sách Thông Báo Đã Đăng</h3>
+            <button class="action-btn success" onclick="openCreateAnnouncementModal()" style="padding:10px 18px;font-size:13px">📢 Đăng Thông Báo Mới</button>
+          </div>
+          <div class="admin-announcements-list" id="admin-announcements-list"></div>
+        </div>
+      </section>
+
     </main><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -673,6 +804,213 @@
   </div>
 </div>
 
+<!-- Notification Center Modal (Học viên xem thông báo & bài tập) -->
+<div class="modal-overlay" id="notif-modal">
+  <div class="modal-box" style="width:520px;max-width:92vw">
+    <div class="auth-header" style="margin-bottom:16px">
+      <div class="auth-logo">🔔</div>
+      <h3 class="auth-title">Bảng Tin & Thông Báo Lớp</h3>
+      <p class="auth-subtitle">Cập nhật tin nhắn và bài tập từ giáo viên Phương Thảo</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="font-size:12px;color:var(--text-muted);font-weight:700" id="notif-unread-text">0 thông báo chưa đọc</span>
+      <button class="action-btn" onclick="markAllNotifsRead()" style="background:var(--surface2);font-size:12px;padding:6px 12px;border:1px solid var(--border)">✓ Đánh dấu đã đọc tất cả</button>
+    </div>
+    <div class="notif-list-container" id="notif-list-container" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <!-- Rendered by JS -->
+    </div>
+    <button type="button" class="modal-close" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeNotifModal()">Đóng</button>
+  </div>
+</div>
+
+<!-- Admin Modal: Giao bài tập mới -->
+<div class="modal-overlay" id="create-assignment-modal">
+  <div class="modal-box" style="width:480px;max-width:92vw">
+    <div class="auth-header">
+      <div class="auth-logo">📝</div>
+      <h3 class="auth-title">Giao Bài Tập Cho Học Viên</h3>
+      <p class="auth-subtitle">Tạo mục tiêu học tập có hạn chót và chỉ tiêu rõ ràng</p>
+    </div>
+    <form id="form-create-assignment" onsubmit="handleCreateAssignmentSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Tên bài tập / Nhiệm vụ</label>
+        <input type="text" class="form-input" id="asgn-title" placeholder="VD: Thuộc 20 từ HSK 1 bài chào hỏi" required />
+      </div>
+      <div style="grid-template-columns:1fr 1fr;display:grid;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Loại bài tập</label>
+          <select class="form-input" id="asgn-type" onchange="updateAssignmentTargetLabel()">
+            <option value="learn_words">📖 Học từ vựng</option>
+            <option value="quiz_score">🎯 Điểm thi Quiz</option>
+            <option value="srs_review">🔁 Ôn tập SRS</option>
+            <option value="stroke_practice">✍️ Luyện viết chữ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Áp dụng cho HSK</label>
+          <select class="form-input" id="asgn-level">
+            <option value="all">Tất cả cấp độ</option>
+            <option value="1">HSK 1</option>
+            <option value="2">HSK 2</option>
+            <option value="3">HSK 3</option>
+            <option value="4">HSK 4</option>
+            <option value="5">HSK 5</option>
+            <option value="6">HSK 6</option>
+            <option value="7">HSK 7</option>
+            <option value="8">HSK 8</option>
+            <option value="9">HSK 9</option>
+          </select>
+        </div>
+      </div>
+      <div style="grid-template-columns:1fr 1fr;display:grid;gap:12px">
+        <div class="form-group">
+          <label class="form-label" id="asgn-target-label">Mục tiêu (Số từ cần thuộc)</label>
+          <input type="number" class="form-input" id="asgn-target" min="1" value="20" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hạn nộp bài</label>
+          <input type="date" class="form-input" id="asgn-deadline" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hướng dẫn / Lời nhắn của cô</label>
+        <textarea class="form-input" id="asgn-desc" rows="3" placeholder="Các em xem kỹ flashcard và làm bài quiz trước 22h tối nhé!" style="resize:vertical"></textarea>
+      </div>
+      <button type="submit" class="action-btn primary" style="width:100%;padding:14px;font-size:15px;margin-top:6px">
+        🚀 Phát Hành Bài Tập Cho Lớp
+      </button>
+    </form>
+    <button type="button" class="modal-close" style="margin-top:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeCreateAssignmentModal()">Hủy bỏ</button>
+  </div>
+</div>
+
+<!-- Admin Modal: Đăng thông báo mới -->
+<div class="modal-overlay" id="create-announcement-modal">
+  <div class="modal-box" style="width:480px;max-width:92vw">
+    <div class="auth-header">
+      <div class="auth-logo">📢</div>
+      <h3 class="auth-title">Phát Thông Báo Cho Lớp</h3>
+      <p class="auth-subtitle">Gửi lời nhắn, lịch thi hoặc bí kíp học tập đến toàn bộ học viên</p>
+    </div>
+    <form id="form-create-announcement" onsubmit="handleCreateAnnouncementSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Tiêu đề thông báo</label>
+        <input type="text" class="form-input" id="ann-title" placeholder="VD: Lịch kiểm tra HSK 1 cuối tuần này" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nhãn / Phân loại</label>
+        <select class="form-input" id="ann-tag">
+          <option value="🔔 Nhắc nhở">🔔 Nhắc nhở bài tập</option>
+          <option value="📅 Lịch học">📅 Lịch học & Thi</option>
+          <option value="🏆 Tuyên dương">🏆 Tuyên dương & Khen thưởng</option>
+          <option value="💡 Bí kíp">💡 Bí kíp học tiếng Trung</option>
+          <option value="🎉 Sự kiện">🎉 Hoạt động lớp học</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nội dung thông báo</label>
+        <textarea class="form-input" id="ann-content" rows="4" placeholder="Nhập chi tiết nội dung cần thông báo cho học viên..." required style="resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <input type="checkbox" id="ann-pinned" style="width:18px;height:18px;cursor:pointer" />
+        <label for="ann-pinned" style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer">📌 Ghim thông báo này lên đầu bảng tin</label>
+      </div>
+      <button type="submit" class="action-btn success" style="width:100%;padding:14px;font-size:15px">
+        📢 Đăng Thông Báo Ngay
+      </button>
+    </form>
+    <button type="button" class="modal-close" style="margin-top:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeCreateAnnouncementModal()">Hủy bỏ</button>
+  </div>
+</div>
+
+<!-- Admin Modal: Chi tiết học viên -->
+<div class="modal-overlay" id="admin-student-modal">
+  <div class="modal-box" style="width:600px;max-width:94vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="profile-avatar-large" id="adm-modal-avatar" style="width:56px;height:56px;font-size:28px">🐼</div>
+        <div>
+          <h3 style="font-size:20px;font-weight:900;color:#0F172A;margin:0" id="adm-modal-name">Học viên</h3>
+          <div style="font-size:12px;color:var(--text-muted)" id="adm-modal-username">@username • Tham gia: 01/01/2025</div>
+        </div>
+      </div>
+      <button class="tts-btn" onclick="closeAdminStudentModal()" style="font-size:18px;padding:4px 10px">✕</button>
+    </div>
+
+    <!-- Quick mini stats -->
+    <div class="dashboard-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+      <div class="stat-card" style="padding:12px">
+        <div class="stat-icon" style="font-size:20px">📖</div>
+        <div class="stat-value" id="adm-modal-learned" style="font-size:20px">0</div>
+        <div class="stat-label">Từ đã thuộc</div>
+      </div>
+      <div class="stat-card" style="padding:12px">
+        <div class="stat-icon" style="font-size:20px">🎯</div>
+        <div class="stat-value" id="adm-modal-pct" style="font-size:20px">0%</div>
+        <div class="stat-label">Tiến độ HSK</div>
+      </div>
+      <div class="stat-card" style="padding:12px">
+        <div class="stat-icon" style="font-size:20px">🔥</div>
+        <div class="stat-value" id="adm-modal-streak" style="font-size:20px">0</div>
+        <div class="stat-label">Chuỗi ngày học</div>
+      </div>
+    </div>
+
+    <!-- Level progress list -->
+    <h4 style="font-size:14px;font-weight:800;color:#0F172A;margin-bottom:12px">📊 Tiến độ 9 cấp HSK của học viên</h4>
+    <div id="adm-modal-levels-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="action-btn" style="background:var(--surface2);border:1px solid var(--border)" onclick="closeAdminStudentModal()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Class Sync Modal (Xuất gói lớp cho cô / Học viên nạp bài từ cô) -->
+<div class="modal-overlay" id="class-sync-modal">
+  <div class="modal-box" style="width:520px;max-width:92vw">
+    <div class="auth-header">
+      <div class="auth-logo">📲</div>
+      <h3 class="auth-title">Đồng Bộ Bài Tập & Thông Báo Lớp</h3>
+      <p class="auth-subtitle">Truyền tải bài tập và thông báo qua nhóm Zalo / Facebook lớp</p>
+    </div>
+
+    <div class="auth-tabs" style="margin-bottom:16px">
+      <button class="auth-tab-btn active" id="tab-class-export" onclick="switchClassSyncTab('export')">📤 Giáo viên xuất gói</button>
+      <button class="auth-tab-btn" id="tab-class-import" onclick="switchClassSyncTab('import')">📥 Học viên nhận bài</button>
+    </div>
+
+    <!-- Panel Xuất (Cho giáo viên) -->
+    <div id="panel-class-export">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+        Sao chép mã gói bài tập bên dưới để gửi vào nhóm Zalo lớp, hoặc tải file gửi học sinh:
+      </p>
+      <textarea id="class-export-box" readonly style="width:100%;height:130px;padding:12px;font-family:monospace;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--surface2);resize:none;margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px">
+        <button class="action-btn primary" onclick="copyClassExportCode()" style="flex:1;padding:12px">📋 Sao chép mã lớp</button>
+        <button class="action-btn" onclick="downloadClassExportFile()" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border)">💾 Tải file gói lớp</button>
+      </div>
+    </div>
+
+    <!-- Panel Nhập (Cho học sinh) -->
+    <div id="panel-class-import" class="hidden">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+        Dán mã bài tập cô giáo gửi vào khung bên dưới để nạp bài tập & thông báo mới:
+      </p>
+      <textarea id="class-import-box" placeholder="Dán mã bài tập từ cô giáo vào đây..." style="width:100%;height:110px;padding:12px;font-family:monospace;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-xs);background:#fff;resize:none;margin-bottom:12px"></textarea>
+      <div style="margin-bottom:14px">
+        <input type="file" id="class-import-file" accept=".json" style="font-size:12px" onchange="handleClassFileUpload(event)" />
+      </div>
+      <button class="action-btn primary" onclick="applyClassImport()" style="width:100%;padding:14px">
+        📥 Nhận Bài Tập & Thông Báo Ngay
+      </button>
+    </div>
+
+    <button type="button" class="modal-close" style="margin-top:16px;background:var(--surface2);color:var(--text);border:1px solid var(--border);box-shadow:none" onclick="closeClassSyncModal()">Đóng</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -685,9 +1023,9 @@
 </script>
 
 <!-- Scripts — data TRƯỚC, app SAU -->
-<script src="data/hsk_data.js?v=4.0"></script>
-<script src="data/radicals_data.js?v=4.0"></script>
-<script src="data/strokes_cache.js?v=4.0"></script>
-<script src="app.js?v=4.0"></script>
+<script src="data/hsk_data.js?v=5.0"></script>
+<script src="data/radicals_data.js?v=5.0"></script>
+<script src="data/strokes_cache.js?v=5.0"></script>
+<script src="app.js?v=5.0"></script>
 </body>
 </html>
