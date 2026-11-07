@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5.0" />
+  <link rel="stylesheet" href="style.css?v=5.1" />
 </head>
 <body>
 
@@ -57,6 +57,9 @@
         <div class="user-name-display" id="sidebar-name">Chưa đăng nhập</div>
         <div class="user-sub-display" id="sidebar-sub">Bấm để đăng nhập / đăng ký</div>
       </div>
+      <button class="sidebar-logout-btn hidden" id="sidebar-logout-btn" onclick="event.stopPropagation(); Auth.logout();" title="Đăng xuất khỏi tài khoản" style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--brand);font-weight:700">
+        🚪
+      </button>
     </div>
 
     <div class="sidebar-footer">phuongthaoHSK3.0@</div>
@@ -84,6 +87,9 @@
         <button class="user-top-btn" id="topbar-user-btn" onclick="openAuthOrProfile()" title="Tài khoản học viên">
           <span class="topbar-avatar" id="topbar-avatar">🐼</span>
           <span class="topbar-username" id="topbar-name">Đăng nhập</span>
+        </button>
+        <button class="action-btn warn hidden" id="topbar-logout-btn" onclick="Auth.logout()" title="Đăng xuất tài khoản" style="padding:7px 12px;font-size:12px;border-radius:var(--radius-xs);font-weight:700">
+          🚪 Đăng xuất
         </button>
       </div>
     </header>
@@ -1023,9 +1029,9 @@
 </script>
 
 <!-- Scripts — data TRƯỚC, app SAU -->
-<script src="data/hsk_data.js?v=5.0"></script>
-<script src="data/radicals_data.js?v=5.0"></script>
-<script src="data/strokes_cache.js?v=5.0"></script>
-<script src="app.js?v=5.0"></script>
+<script src="data/hsk_data.js?v=5.1"></script>
+<script src="data/radicals_data.js?v=5.1"></script>
+<script src="data/strokes_cache.js?v=5.1"></script>
+<script src="app.js?v=5.1"></script>
 </body>
 </html>
